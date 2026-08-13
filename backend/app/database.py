@@ -3,7 +3,6 @@ import time
 from typing import Dict, Any, List, Optional
 from neo4j import GraphDatabase, Driver
 from app.config import settings
-from app.cypher_queries import CYPHER_QUERIES
 
 logger = logging.getLogger("aml_database")
 logger.setLevel(logging.INFO)
@@ -32,8 +31,14 @@ class DatabaseManager:
             return
 
         try:
-            # Initialize official Neo4j driver (CognoDB speaks openCypher over Bolt protocol)
-            self.driver = GraphDatabase.driver(uri, auth=(user, password))
+            # Initialize official Neo4j driver with connection pool limits for CognoDB free tier
+            self.driver = GraphDatabase.driver(
+                uri,
+                auth=(user, password),
+                max_connection_lifetime=300,
+                max_connection_pool_size=50,
+                connection_acquisition_timeout=15.0
+            )
             # Test connectivity
             self.driver.verify_connectivity()
             self.is_connected = True
@@ -88,15 +93,14 @@ class DatabaseManager:
         """
         In-memory fallback engine representing SAML dataset topology when DB is offline.
         """
-        # Determine query type based on text matching
         q_upper = query.upper()
 
-        if "OVERVIEW_STATS" in q_upper or "COUNT(DISTINCT A)" in q_upper:
+        if "OVERVIEW_STATS" in q_upper or "COUNT(DISTINCT A)" in q_upper or "COUNT(A)" in q_upper:
             return [{
-                "totalAccounts": 28,
-                "totalTransactions": 64,
-                "flaggedAccounts": 8,
-                "totalVolume": 1485200.00
+                "totalAccounts": 4781,
+                "totalTransactions": 4000,
+                "flaggedAccounts": 1390,
+                "totalVolume": 96854937.00
             }]
 
         if "DETECT_MONEY_LOOPS" in q_upper or "TRANSFERRED*2..4" in q_upper:
@@ -111,17 +115,6 @@ class DatabaseManager:
                         {"id": "TX-LOOP-1", "amount": 250000.0, "timestamp": "2026-08-10T14:30:00Z"},
                         {"id": "TX-LOOP-2", "amount": 248000.0, "timestamp": "2026-08-11T09:15:00Z"},
                         {"id": "TX-LOOP-3", "amount": 245000.0, "timestamp": "2026-08-12T16:45:00Z"}
-                    ]
-                },
-                {
-                    "nodeIds": ["ACC-404", "ACC-505", "ACC-404"],
-                    "holderNames": ["Vanguard Import/Export", "Panama Holdings Ltd", "Vanguard Import/Export"],
-                    "nodeStatuses": ["SUSPICIOUS", "FLAGGED", "SUSPICIOUS"],
-                    "hopCount": 2,
-                    "totalVolume": 180000.00,
-                    "transactions": [
-                        {"id": "TX-LOOP-4", "amount": 180000.0, "timestamp": "2026-08-11T11:00:00Z"},
-                        {"id": "TX-LOOP-5", "amount": 178500.0, "timestamp": "2026-08-12T10:30:00Z"}
                     ]
                 }
             ]
@@ -141,24 +134,10 @@ class DatabaseManager:
                     "account2Holder": "Shadow Capital LLC",
                     "account2Status": "SUSPICIOUS",
                     "directTransferAmount": 95000.00
-                },
-                {
-                    "account1Id": "ACC-702",
-                    "account1Holder": "Shadow Capital LLC",
-                    "account1Status": "SUSPICIOUS",
-                    "infraId": "IP-185-220-101-5",
-                    "infraType": "IPAddress",
-                    "ipAddress": "185.220.101.5",
-                    "deviceId": None,
-                    "isProxy": True,
-                    "account2Id": "ACC-703",
-                    "account2Holder": "Vortex Mules Ltd",
-                    "account2Status": "SUSPENDED",
-                    "directTransferAmount": 87000.00
                 }
             ]
 
-        if "SMURFING_STRUCTURING" in q_upper or "AMOUNT < $MAXTHRESHOLD" in q_upper or "T.AMOUNT < 10000" in q_upper:
+        if "SMURFING_STRUCTURING" in q_upper or "AMOUNT < $MAXTHRESHOLD" in q_upper:
             return [
                 {
                     "muleAccountId": "ACC-888",
@@ -166,40 +145,27 @@ class DatabaseManager:
                     "muleStatus": "FLAGGED",
                     "txCount": 5,
                     "totalInbound": 47250.00,
-                    "sourceHolders": ["Smurf Source 1", "Smurf Source 2", "Smurf Source 3", "Smurf Source 4", "Smurf Source 5"]
+                    "sourceHolders": ["Smurf Source 1", "Smurf Source 2", "Smurf Source 3"]
                 }
             ]
 
-        if "SEARCH_ACCOUNTS" in q_upper or "WHERE TOLOWER(A.HOLDERNAME)" in q_upper:
+        if "SEARCH_ACCOUNTS" in q_upper:
             term = parameters.get("searchTerm", "").lower()
             all_accounts = [
-                {"id": "ACC-101", "accountNumber": "10029384", "holderName": "Apex Global Capital", "riskScore": 92, "status": "FLAGGED", "balance": 1450000.0, "type": "BUSINESS"},
-                {"id": "ACC-202", "accountNumber": "10029385", "holderName": "Shell Corp Alpha", "riskScore": 88, "status": "SUSPECTED", "balance": 890000.0, "type": "SHELL"},
-                {"id": "ACC-303", "accountNumber": "10029386", "holderName": "Cayman Offshore Trust", "riskScore": 95, "status": "SUSPENDED", "balance": 3200000.0, "type": "OFFSHORE"},
-                {"id": "ACC-701", "accountNumber": "10029390", "holderName": "DarkSky Trading", "riskScore": 85, "status": "FLAGGED", "balance": 450000.0, "type": "BUSINESS"},
-                {"id": "ACC-888", "accountNumber": "10029399", "holderName": "Aggregation Mule Account", "riskScore": 94, "status": "FLAGGED", "balance": 98000.0, "type": "INDIVIDUAL"}
+                {"id": "ACC-7401327478", "accountNumber": "7401327478", "holderName": "Account ACC-7401327478 (Bank-UK)", "riskScore": 92, "status": "FLAGGED", "balance": 750000.0, "type": "BUSINESS"},
+                {"id": "ACC-4336451277", "accountNumber": "4336451277", "holderName": "Account ACC-4336451277 (Bank-UK)", "riskScore": 88, "status": "FLAGGED", "balance": 750000.0, "type": "BUSINESS"}
             ]
             if not term:
                 return all_accounts
             return [a for a in all_accounts if term in a["holderName"].lower() or term in a["id"].lower()]
 
-        # Generic full graph fallback topology
         return self._generate_full_fallback_graph()
 
     def _generate_full_fallback_graph(self) -> List[Dict[str, Any]]:
-        """Returns standard nodes and relationships for full graph rendering."""
         nodes = [
             {"id": "ACC-101", "label": "Account", "properties": {"id": "ACC-101", "holderName": "Apex Global Capital", "status": "FLAGGED", "riskScore": 92, "type": "BUSINESS", "balance": 1450000.0}},
             {"id": "ACC-202", "label": "Account", "properties": {"id": "ACC-202", "holderName": "Shell Corp Alpha", "status": "SUSPICIOUS", "riskScore": 88, "type": "SHELL", "balance": 890000.0}},
             {"id": "ACC-303", "label": "Account", "properties": {"id": "ACC-303", "holderName": "Cayman Offshore Trust", "status": "SUSPENDED", "riskScore": 95, "type": "OFFSHORE", "balance": 3200000.0}},
-            {"id": "ACC-404", "label": "Account", "properties": {"id": "ACC-404", "holderName": "Vanguard Import/Export", "status": "SUSPICIOUS", "riskScore": 76, "type": "BUSINESS", "balance": 640000.0}},
-            {"id": "ACC-505", "label": "Account", "properties": {"id": "ACC-505", "holderName": "Panama Holdings Ltd", "status": "FLAGGED", "riskScore": 89, "type": "SHELL", "balance": 1100000.0}},
-            {"id": "ACC-701", "label": "Account", "properties": {"id": "ACC-701", "holderName": "DarkSky Trading", "status": "FLAGGED", "riskScore": 85, "type": "BUSINESS", "balance": 450000.0}},
-            {"id": "ACC-702", "label": "Account", "properties": {"id": "ACC-702", "holderName": "Shadow Capital LLC", "status": "SUSPICIOUS", "riskScore": 79, "type": "BUSINESS", "balance": 310000.0}},
-            {"id": "ACC-703", "label": "Account", "properties": {"id": "ACC-703", "holderName": "Vortex Mules Ltd", "status": "SUSPENDED", "riskScore": 91, "type": "SHELL", "balance": 18000.0}},
-            {"id": "ACC-888", "label": "Account", "properties": {"id": "ACC-888", "holderName": "Aggregation Mule Account", "status": "FLAGGED", "riskScore": 94, "type": "INDIVIDUAL", "balance": 98000.0}},
-            {"id": "ACC-901", "label": "Account", "properties": {"id": "ACC-901", "holderName": "Acme Clean Corp", "status": "NORMAL", "riskScore": 12, "type": "BUSINESS", "balance": 520000.0}},
-            {"id": "ACC-902", "label": "Account", "properties": {"id": "ACC-902", "holderName": "John Doe Retail", "status": "NORMAL", "riskScore": 8, "type": "INDIVIDUAL", "balance": 15400.0}},
             {"id": "DEV-TOR-999", "label": "Device", "properties": {"id": "DEV-TOR-999", "deviceId": "DEV-TOR-999", "deviceType": "MAC_BOOK_PRO", "os": "macOS 15.1"}},
             {"id": "IP-185-220-101-5", "label": "IPAddress", "properties": {"id": "IP-185-220-101-5", "ip": "185.220.101.5", "country": "Panama", "isProxy": True}}
         ]
@@ -207,25 +173,14 @@ class DatabaseManager:
         relationships = [
             {"source": "ACC-101", "target": "ACC-202", "type": "TRANSFERRED", "properties": {"id": "TX-1", "amount": 250000.0, "isLaundering": True}},
             {"source": "ACC-202", "target": "ACC-303", "type": "TRANSFERRED", "properties": {"id": "TX-2", "amount": 248000.0, "isLaundering": True}},
-            {"source": "ACC-303", "target": "ACC-101", "type": "TRANSFERRED", "properties": {"id": "TX-3", "amount": 245000.0, "isLaundering": True}},
-            {"source": "ACC-404", "target": "ACC-505", "type": "TRANSFERRED", "properties": {"id": "TX-4", "amount": 180000.0, "isLaundering": True}},
-            {"source": "ACC-505", "target": "ACC-404", "type": "TRANSFERRED", "properties": {"id": "TX-5", "amount": 178500.0, "isLaundering": True}},
-            {"source": "ACC-701", "target": "DEV-TOR-999", "type": "USED_DEVICE", "properties": {"lastUsed": "2026-08-12T10:00:00Z"}},
-            {"source": "ACC-702", "target": "DEV-TOR-999", "type": "USED_DEVICE", "properties": {"lastUsed": "2026-08-12T11:30:00Z"}},
-            {"source": "ACC-703", "target": "IP-185-220-101-5", "type": "CONNECTED_FROM", "properties": {"lastLogin": "2026-08-12T12:00:00Z"}},
-            {"source": "ACC-701", "target": "IP-185-220-101-5", "type": "CONNECTED_FROM", "properties": {"lastLogin": "2026-08-12T09:45:00Z"}},
-            {"source": "ACC-901", "target": "ACC-902", "type": "TRANSFERRED", "properties": {"id": "TX-6", "amount": 3400.0, "isLaundering": False}}
+            {"source": "ACC-303", "target": "ACC-101", "type": "TRANSFERRED", "properties": {"id": "TX-3", "amount": 245000.0, "isLaundering": True}}
         ]
 
         result = []
         for rel in relationships:
             src_node = next(n for n in nodes if n["id"] == rel["source"])
             tgt_node = next(n for n in nodes if n["id"] == rel["target"])
-            result.append({
-                "n": src_node,
-                "r": rel,
-                "m": tgt_node
-            })
+            result.append({"n": src_node, "r": rel, "m": tgt_node})
         return result
 
 db_manager = DatabaseManager()

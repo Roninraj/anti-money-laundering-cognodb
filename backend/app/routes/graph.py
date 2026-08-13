@@ -6,6 +6,47 @@ from app.cypher_queries import CYPHER_QUERIES
 
 router = APIRouter(prefix="/api/graph", tags=["Graph Network Topology"])
 
+def _extract_node(entity: Any) -> Optional[Dict[str, Any]]:
+    """Helper to safely extract Node attributes whether entity is dict, tuple, or Neo4j Node."""
+    if not entity:
+        return None
+    if isinstance(entity, dict):
+        props = entity.get("properties", entity)
+        node_id = props.get("id") or entity.get("id")
+        if not node_id:
+            return None
+        return {
+            "id": node_id,
+            "label": entity.get("label", props.get("label", "Account")),
+            "holderName": props.get("holderName", node_id),
+            "status": props.get("status", "NORMAL"),
+            "riskScore": props.get("riskScore", 0),
+            "balance": props.get("balance", 0.0),
+            "type": props.get("type", "UNKNOWN"),
+            "ip": props.get("ip"),
+            "deviceId": props.get("deviceId"),
+            "isProxy": props.get("isProxy", False)
+        }
+    if hasattr(entity, "items") or hasattr(entity, "_properties"):
+        props = dict(getattr(entity, "_properties", entity))
+        node_id = props.get("id")
+        if not node_id:
+            return None
+        labels = list(getattr(entity, "labels", ["Account"]))
+        return {
+            "id": node_id,
+            "label": labels[0] if labels else "Account",
+            "holderName": props.get("holderName", node_id),
+            "status": props.get("status", "NORMAL"),
+            "riskScore": props.get("riskScore", 0),
+            "balance": props.get("balance", 0.0),
+            "type": props.get("type", "UNKNOWN"),
+            "ip": props.get("ip"),
+            "deviceId": props.get("deviceId"),
+            "isProxy": props.get("isProxy", False)
+        }
+    return None
+
 def _format_graph_response(raw_results: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     Parses Neo4j records into standardized nodes & links format for force-directed canvas.
@@ -14,62 +55,43 @@ def _format_graph_response(raw_results: List[Dict[str, Any]]) -> Dict[str, Any]:
     links = []
 
     for row in raw_results:
-        # Single element or triple (n, r, m)
-        n = row.get("n") or row.get("a")
-        r = row.get("r") or row.get("t")
-        m = row.get("m") or row.get("neighbor") or row.get("infra")
+        n_raw = row.get("n") or row.get("a")
+        r_raw = row.get("r") or row.get("t")
+        m_raw = row.get("m") or row.get("neighbor") or row.get("infra")
 
-        if n:
-            node_id = n.get("id") or (n.get("properties", {}).get("id") if isinstance(n, dict) else None)
-            if node_id and node_id not in nodes_dict:
-                props = n.get("properties", n) if isinstance(n, dict) else {}
-                label = n.get("label", props.get("label", "Account"))
-                nodes_dict[node_id] = {
-                    "id": node_id,
-                    "label": label,
-                    "holderName": props.get("holderName", node_id),
-                    "status": props.get("status", "NORMAL"),
-                    "riskScore": props.get("riskScore", 0),
-                    "balance": props.get("balance", 0.0),
-                    "type": props.get("type", "UNKNOWN"),
-                    "ip": props.get("ip"),
-                    "deviceId": props.get("deviceId"),
-                    "isProxy": props.get("isProxy", False)
-                }
+        n_node = _extract_node(n_raw)
+        m_node = _extract_node(m_raw)
 
-        if m:
-            m_id = m.get("id") or (m.get("properties", {}).get("id") if isinstance(m, dict) else None)
-            if m_id and m_id not in nodes_dict:
-                props = m.get("properties", m) if isinstance(m, dict) else {}
-                label = m.get("label", props.get("label", "Account"))
-                nodes_dict[m_id] = {
-                    "id": m_id,
-                    "label": label,
-                    "holderName": props.get("holderName", m_id),
-                    "status": props.get("status", "NORMAL"),
-                    "riskScore": props.get("riskScore", 0),
-                    "balance": props.get("balance", 0.0),
-                    "type": props.get("type", "UNKNOWN"),
-                    "ip": props.get("ip"),
-                    "deviceId": props.get("deviceId"),
-                    "isProxy": props.get("isProxy", False)
-                }
+        if n_node and n_node["id"] not in nodes_dict:
+            nodes_dict[n_node["id"]] = n_node
 
-        if n and m and r:
-            src_id = n.get("id") or n.get("properties", {}).get("id")
-            tgt_id = m.get("id") or m.get("properties", {}).get("id")
-            rel_props = r.get("properties", r) if isinstance(r, dict) else {}
-            rel_type = r.get("type", rel_props.get("type", "CONNECTED"))
+        if m_node and m_node["id"] not in nodes_dict:
+            nodes_dict[m_node["id"]] = m_node
 
-            if src_id and tgt_id:
-                links.append({
-                    "source": src_id,
-                    "target": tgt_id,
-                    "type": rel_type,
-                    "amount": rel_props.get("amount", 0.0),
-                    "isLaundering": rel_props.get("isLaundering", False),
-                    "id": rel_props.get("id", f"{src_id}-{tgt_id}")
-                })
+        if n_node and m_node and r_raw:
+            src_id = n_node["id"]
+            tgt_id = m_node["id"]
+            
+            rel_type = "TRANSFERRED"
+            rel_props = {}
+            if isinstance(r_raw, dict):
+                rel_props = r_raw.get("properties", r_raw)
+                rel_type = r_raw.get("type", rel_props.get("type", "TRANSFERRED"))
+            elif hasattr(r_raw, "type"):
+                rel_type = getattr(r_raw, "type", "TRANSFERRED")
+                rel_props = dict(getattr(r_raw, "_properties", {}))
+            elif isinstance(r_raw, tuple) and len(r_raw) >= 2:
+                rel_type = str(r_raw[1]) if len(r_raw) > 1 else "TRANSFERRED"
+                rel_props = r_raw[0] if isinstance(r_raw[0], dict) else {}
+
+            links.append({
+                "source": src_id,
+                "target": tgt_id,
+                "type": rel_type,
+                "amount": float(rel_props.get("amount", 0.0)) if isinstance(rel_props, dict) else 0.0,
+                "isLaundering": bool(rel_props.get("isLaundering", False)) if isinstance(rel_props, dict) else False,
+                "id": f"{src_id}-{tgt_id}"
+            })
 
     return {
         "nodes": list(nodes_dict.values()),
