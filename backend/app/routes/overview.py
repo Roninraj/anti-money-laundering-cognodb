@@ -1,7 +1,9 @@
 import time
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, BackgroundTasks
 from app.database import db_manager
 from app.cypher_queries import CYPHER_QUERIES
+from scripts.load_saml_kaggle import load_saml_dataset
+from pathlib import Path
 
 router = APIRouter(prefix="/api/overview", tags=["Overview"])
 
@@ -54,4 +56,14 @@ def search_accounts(q: str = Query("", description="Account ID, holder name or a
             "parameters": params,
             "executionTimeMs": execution_time_ms
         }
+    }
+
+@router.post("/seed")
+def trigger_database_seed():
+    """Triggers SAML dataset seeding into CognoDB Cloud."""
+    default_csv = str(Path(__file__).resolve().parent.parent.parent / "scripts" / "saml_sample.csv")
+    success = load_saml_dataset(default_csv)
+    return {
+        "status": "SUCCESS" if success else "STANDBY",
+        "message": "Seeded SAML Dataset into CognoDB Cloud!" if success else "CognoDB credentials pending in .env"
     }

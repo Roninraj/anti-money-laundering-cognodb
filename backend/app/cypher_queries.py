@@ -9,10 +9,12 @@ CYPHER_QUERIES = {
         "description": "Calculates aggregate counts of accounts, transactions, high-risk accounts, and total volume.",
         "cypher": """
         MATCH (a:Account)
+        WITH count(a) AS totalAccounts,
+             sum(CASE WHEN a.status IN ['FLAGGED', 'SUSPICIOUS', 'SUSPENDED'] THEN 1 ELSE 0 END) AS flaggedAccounts
         OPTIONAL MATCH ()-[t:TRANSFERRED]->()
-        RETURN count(DISTINCT a) AS totalAccounts,
-               count(DISTINCT t) AS totalTransactions,
-               sum(CASE WHEN a.status IN ['FLAGGED', 'SUSPICIOUS', 'SUSPENDED'] THEN 1 ELSE 0 END) AS flaggedAccounts,
+        RETURN totalAccounts,
+               flaggedAccounts,
+               count(t) AS totalTransactions,
                coalesce(sum(t.amount), 0.0) AS totalVolume
         """,
         "relational_comparison": "In relational SQL, calculating graph-wide metrics across multiple polymorphic relationship tables requires expensive JOINs across distinct transaction logs."
@@ -101,7 +103,7 @@ CYPHER_QUERIES = {
         MATCH (n)
         OPTIONAL MATCH (n)-[r]->(m)
         RETURN n, r, m
-        LIMIT 500
+        LIMIT 300
         """,
         "relational_comparison": "Constructing visual graphs in relational DBs requires joining 5+ entity tables and transforming rows to graph format."
     },
