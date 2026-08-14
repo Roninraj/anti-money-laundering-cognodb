@@ -33,10 +33,31 @@ def get_account_details(account_id: str):
         return {"account": search_res[0].get("a"), "customer": None, "transactions": []}
 
     row = results[0]
+    account_obj = row.get("a", {})
+    if isinstance(account_obj, dict):
+        props = account_obj.get("properties", account_obj)
+    else:
+        props = dict(getattr(account_obj, "_properties", {}))
+    
+    txs = row.get("transactions", [])
+    laundering_tx_count = sum(1 for t in txs if t.get("isLaundering"))
+    structuring_tx_count = sum(1 for t in txs if 8000 <= (t.get("amount") or 0) < 10000)
+    total_vol = sum((t.get("amount") or 0) for t in txs)
+    acc_type = props.get("type", "INDIVIDUAL")
+    
+    risk_factors = {
+        "launderingScore": 35 + (laundering_tx_count * 5) if laundering_tx_count > 0 else 0,
+        "structuringScore": 20 if structuring_tx_count >= 2 else (10 if structuring_tx_count == 1 else 0),
+        "volumeScore": 15 if total_vol > 500000 else (10 if total_vol > 100000 else 0),
+        "infrastructureScore": 15 if (props.get("ip") or props.get("deviceId") or props.get("status") in ["FLAGGED", "SUSPICIOUS"]) else 0,
+        "entityScore": 15 if acc_type in ["SHELL", "OFFSHORE"] else (5 if acc_type == "BUSINESS" else 0)
+    }
+
     return {
         "account": row.get("a"),
         "customer": row.get("c"),
-        "transactions": row.get("transactions", [])
+        "riskFactors": risk_factors,
+        "transactions": txs
     }
 
 @router.patch("/{account_id}/status")

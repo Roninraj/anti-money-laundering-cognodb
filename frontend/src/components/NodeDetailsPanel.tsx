@@ -74,26 +74,97 @@ export const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
       <div className="flex-1 overflow-y-auto space-y-5 py-4 pr-1">
         {/* Risk Score Radial Metric */}
         {node.label === 'Account' && (
-          <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Risk Assessment Score</p>
-              <div className="flex items-baseline space-x-2 mt-1">
-                <span className={`text-3xl font-extrabold ${isHighRisk ? 'text-red-500' : 'text-emerald-400'}`}>
-                  {riskScore}
-                </span>
-                <span className="text-xs text-slate-500">/ 100</span>
+          <div className="space-y-3">
+            <div className="bg-slate-900/90 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-slate-400 font-medium">Risk Assessment Score</p>
+                <div className="flex items-baseline space-x-2 mt-1">
+                  <span className={`text-3xl font-extrabold ${isHighRisk ? 'text-red-500' : 'text-emerald-400'}`}>
+                    {riskScore}
+                  </span>
+                  <span className="text-xs text-slate-500">/ 100</span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  {riskScore >= 85 ? 'Severe AML Pattern / Cluster Detected' :
+                   riskScore >= 60 ? 'Elevated Suspicious Behavior' :
+                   'Standard Compliant Account Activity'}
+                </p>
               </div>
-              <p className="text-[11px] text-slate-400 mt-1">
-                {isHighRisk ? 'High Risk AML Pattern Detected' : 'Standard Account Activity'}
-              </p>
+
+              {/* Risk Badge */}
+              <div className={`p-3 rounded-full border ${
+                isHighRisk ? 'bg-red-950/60 border-red-500/50 text-red-500' : 'bg-emerald-950/60 border-emerald-500/50 text-emerald-400'
+              }`}>
+                <ShieldAlert className="w-6 h-6" />
+              </div>
             </div>
 
-            {/* Risk Badge */}
-            <div className={`p-3 rounded-full border ${
-              isHighRisk ? 'bg-red-950/60 border-red-500/50 text-red-500' : 'bg-emerald-950/60 border-emerald-500/50 text-emerald-400'
-            }`}>
-              <ShieldAlert className="w-6 h-6" />
-            </div>
+            {/* Multi-Factor Risk Assessment Breakdown */}
+            {details?.riskFactors && (
+              <div className="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                  <span>Risk Factor Breakdown</span>
+                  <span className="text-[10px] text-slate-500 font-mono">Multi-Factor Engine</span>
+                </div>
+
+                <div className="space-y-1.5 text-xs">
+                  {/* Factor 1: Laundering Cycle Involvement */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+                      Laundering Flow Match:
+                    </span>
+                    <span className="font-mono text-slate-200">
+                      +{details.riskFactors.launderingScore} pts
+                    </span>
+                  </div>
+
+                  {/* Factor 2: Structuring & Smurfing */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+                      Structuring Velocity:
+                    </span>
+                    <span className="font-mono text-slate-200">
+                      +{details.riskFactors.structuringScore} pts
+                    </span>
+                  </div>
+
+                  {/* Factor 3: Volume Exposure */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                      Volume Exposure:
+                    </span>
+                    <span className="font-mono text-slate-200">
+                      +{details.riskFactors.volumeScore} pts
+                    </span>
+                  </div>
+
+                  {/* Factor 4: Infrastructure & Proxy Linkage */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+                      Infrastructure / Proxy:
+                    </span>
+                    <span className="font-mono text-slate-200">
+                      +{details.riskFactors.infrastructureScore} pts
+                    </span>
+                  </div>
+
+                  {/* Factor 5: Entity Type Risk */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                      Entity Profile:
+                    </span>
+                    <span className="font-mono text-slate-200">
+                      +{details.riskFactors.entityScore} pts
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

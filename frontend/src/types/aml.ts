@@ -127,9 +127,18 @@ export interface SmurfingResponse {
   queryDetails: QueryDetails;
 }
 
+export interface RiskFactorBreakdown {
+  launderingScore: number;
+  structuringScore: number;
+  volumeScore: number;
+  infrastructureScore: number;
+  entityScore: number;
+}
+
 export interface AccountDetailsResponse {
   account: GraphNode;
   customer?: any;
+  riskFactors?: RiskFactorBreakdown;
   transactions: Array<{
     txId: string;
     amount: number;
@@ -138,3 +147,4 @@ export interface AccountDetailsResponse {
     counterparty: string;
   }>;
 }
+

@@ -153,7 +153,7 @@ class DatabaseManager:
             return [{
                 "totalAccounts": 4781,
                 "totalTransactions": 4000,
-                "flaggedAccounts": 1390,
+                "flaggedAccounts": 299,
                 "totalVolume": 96854937.00
             }]
 
@@ -162,7 +162,7 @@ class DatabaseManager:
                 {
                     "nodeIds": ["ACC-101", "ACC-202", "ACC-303", "ACC-101"],
                     "holderNames": ["Apex Global Capital", "Shell Corp Alpha", "Cayman Offshore Trust", "Apex Global Capital"],
-                    "nodeStatuses": ["FLAGGED", "SUSPECTED", "SUSPENDED", "FLAGGED"],
+                    "nodeStatuses": ["FLAGGED", "SUSPICIOUS", "SUSPENDED", "FLAGGED"],
                     "hopCount": 3,
                     "totalVolume": 250000.00,
                     "transactions": [
@@ -206,14 +206,14 @@ class DatabaseManager:
         if "SEARCH_ACCOUNTS" in q_upper:
             term = parameters.get("searchTerm", "").lower()
             all_accounts = [
-                {"id": "ACC-101", "accountNumber": "101", "holderName": "Apex Global Capital", "riskScore": 92, "status": "FLAGGED", "balance": 1450000.0, "type": "BUSINESS"},
-                {"id": "ACC-202", "accountNumber": "202", "holderName": "Shell Corp Alpha", "riskScore": 88, "status": "SUSPICIOUS", "balance": 890000.0, "type": "SHELL"},
-                {"id": "ACC-303", "accountNumber": "303", "holderName": "Cayman Offshore Trust", "riskScore": 95, "status": "SUSPENDED", "balance": 3200000.0, "type": "OFFSHORE"},
+                {"id": "ACC-101", "accountNumber": "101", "holderName": "Apex Global Capital", "riskScore": 95, "status": "FLAGGED", "balance": 1450000.0, "type": "BUSINESS"},
+                {"id": "ACC-202", "accountNumber": "202", "holderName": "Shell Corp Alpha", "riskScore": 76, "status": "SUSPICIOUS", "balance": 890000.0, "type": "SHELL"},
+                {"id": "ACC-303", "accountNumber": "303", "holderName": "Cayman Offshore Trust", "riskScore": 98, "status": "SUSPENDED", "balance": 3200000.0, "type": "OFFSHORE"},
                 {"id": "ACC-701", "accountNumber": "701", "holderName": "DarkSky Trading", "riskScore": 91, "status": "FLAGGED", "balance": 520000.0, "type": "BUSINESS"},
-                {"id": "ACC-702", "accountNumber": "702", "holderName": "Shadow Capital LLC", "riskScore": 84, "status": "SUSPICIOUS", "balance": 310000.0, "type": "BUSINESS"},
+                {"id": "ACC-702", "accountNumber": "702", "holderName": "Shadow Capital LLC", "riskScore": 74, "status": "SUSPICIOUS", "balance": 310000.0, "type": "BUSINESS"},
                 {"id": "ACC-888", "accountNumber": "888", "holderName": "Aggregation Mule Account", "riskScore": 94, "status": "FLAGGED", "balance": 47250.0, "type": "INDIVIDUAL"},
                 {"id": "ACC-7401327478", "accountNumber": "7401327478", "holderName": "Account ACC-7401327478 (Bank-UK)", "riskScore": 92, "status": "FLAGGED", "balance": 750000.0, "type": "BUSINESS"},
-                {"id": "ACC-4336451277", "accountNumber": "4336451277", "holderName": "Account ACC-4336451277 (Bank-UK)", "riskScore": 88, "status": "FLAGGED", "balance": 750000.0, "type": "BUSINESS"},
+                {"id": "ACC-4336451277", "accountNumber": "4336451277", "holderName": "Account ACC-4336451277 (Bank-UK)", "riskScore": 72, "status": "SUSPICIOUS", "balance": 280000.0, "type": "BUSINESS"},
                 {"id": "ACC-9001123445", "accountNumber": "9001123445", "holderName": "Safe Horizon Retail", "riskScore": 12, "status": "NORMAL", "balance": 45000.0, "type": "INDIVIDUAL"}
             ]
             if not term:
@@ -224,9 +224,9 @@ class DatabaseManager:
 
     def _generate_full_fallback_graph(self) -> List[Dict[str, Any]]:
         nodes = [
-            {"id": "ACC-101", "label": "Account", "properties": {"id": "ACC-101", "holderName": "Apex Global Capital", "status": "FLAGGED", "riskScore": 92, "type": "BUSINESS", "balance": 1450000.0}},
-            {"id": "ACC-202", "label": "Account", "properties": {"id": "ACC-202", "holderName": "Shell Corp Alpha", "status": "SUSPICIOUS", "riskScore": 88, "type": "SHELL", "balance": 890000.0}},
-            {"id": "ACC-303", "label": "Account", "properties": {"id": "ACC-303", "holderName": "Cayman Offshore Trust", "status": "SUSPENDED", "riskScore": 95, "type": "OFFSHORE", "balance": 3200000.0}},
+            {"id": "ACC-101", "label": "Account", "properties": {"id": "ACC-101", "holderName": "Apex Global Capital", "status": "FLAGGED", "riskScore": 95, "type": "BUSINESS", "balance": 1450000.0}},
+            {"id": "ACC-202", "label": "Account", "properties": {"id": "ACC-202", "holderName": "Shell Corp Alpha", "status": "SUSPICIOUS", "riskScore": 76, "type": "SHELL", "balance": 890000.0}},
+            {"id": "ACC-303", "label": "Account", "properties": {"id": "ACC-303", "holderName": "Cayman Offshore Trust", "status": "SUSPENDED", "riskScore": 98, "type": "OFFSHORE", "balance": 3200000.0}},
             {"id": "DEV-TOR-999", "label": "Device", "properties": {"id": "DEV-TOR-999", "deviceId": "DEV-TOR-999", "deviceType": "MAC_BOOK_PRO", "os": "macOS 15.1"}},
             {"id": "IP-185-220-101-5", "label": "IPAddress", "properties": {"id": "IP-185-220-101-5", "ip": "185.220.101.5", "country": "Panama", "isProxy": True}}
         ]

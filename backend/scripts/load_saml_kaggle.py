@@ -99,24 +99,69 @@ def load_saml_dataset(csv_path: str = DEFAULT_KAGGLE_CSV, max_laundering: int = 
             logger.error("No valid transaction rows parsed from CSV.")
             return False
 
-        # Extract unique accounts
-        accounts_dict = {}
+        # Extract unique accounts with multi-factor risk scoring
+        acc_stats = {}
         for tx in combined_txs:
             for acc_id, bank in [(tx["fromAcc"], tx["fromBank"]), (tx["toAcc"], tx["toBank"])]:
-                if acc_id not in accounts_dict:
-                    is_high_risk = tx["isLaundering"]
-                    accounts_dict[acc_id] = {
-                        "id": acc_id,
-                        "accountNumber": acc_id.replace("ACC-", ""),
-                        "holderName": f"Account {acc_id} ({bank})",
+                if acc_id not in acc_stats:
+                    acc_stats[acc_id] = {
                         "bank": bank,
-                        "status": "FLAGGED" if is_high_risk else "NORMAL",
-                        "riskScore": 92 if is_high_risk else 12,
-                        "type": "BUSINESS" if is_high_risk else "INDIVIDUAL",
-                        "balance": 750000.0 if is_high_risk else 32000.0
+                        "txCount": 0,
+                        "launderingTx": 0,
+                        "structuringCount": 0,
+                        "totalVolume": 0.0
                     }
+                acc_stats[acc_id]["txCount"] += 1
+                acc_stats[acc_id]["totalVolume"] += tx["amount"]
+                if tx["isLaundering"]:
+                    acc_stats[acc_id]["launderingTx"] += 1
+                if 8000.0 <= tx["amount"] < 10000.0:
+                    acc_stats[acc_id]["structuringCount"] += 1
 
-        logger.info(f"Extracted {len(accounts_dict)} unique Account entities from Kaggle SAML topology.")
+        accounts_dict = {}
+        for acc_id, stat in acc_stats.items():
+            laund_tx = stat["launderingTx"]
+            struct_tx = stat["structuringCount"]
+            tot_vol = stat["totalVolume"]
+            
+            raw_score = 10
+            if laund_tx > 0:
+                raw_score += 35 + (laund_tx * 5)
+            if struct_tx >= 2:
+                raw_score += 20
+            elif struct_tx == 1:
+                raw_score += 10
+            if tot_vol > 500000.0:
+                raw_score += 15
+            elif tot_vol > 100000.0:
+                raw_score += 10
+
+            final_score = min(98, max(8, raw_score))
+            if final_score >= 85:
+                status = "FLAGGED"
+                acc_type = "SHELL" if "UK" in stat["bank"] else "BUSINESS"
+                balance = 750000.0
+            elif final_score >= 60:
+                status = "SUSPICIOUS"
+                acc_type = "BUSINESS"
+                balance = 280000.0
+            else:
+                status = "NORMAL"
+                acc_type = "INDIVIDUAL"
+                balance = 32000.0
+
+            accounts_dict[acc_id] = {
+                "id": acc_id,
+                "accountNumber": acc_id.replace("ACC-", ""),
+                "holderName": f"Account {acc_id} ({stat['bank']})",
+                "bank": stat["bank"],
+                "status": status,
+                "riskScore": final_score,
+                "type": acc_type,
+                "balance": balance
+            }
+
+        logger.info(f"Extracted {len(accounts_dict)} unique Account entities with multi-factor risk scoring from Kaggle SAML topology.")
 
         # 2. Connect to CognoDB Cloud and seed via UNWIND batching
         if "your_saved_password" in password or "demo.databases" in uri:
