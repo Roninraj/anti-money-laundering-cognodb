@@ -180,18 +180,11 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         ctx.strokeStyle = '#0f172a';
         ctx.stroke();
 
-        // Node Label Text
+        // Node Label Text (Only account name, nothing else)
         ctx.font = `${isSelected ? 'bold 11px' : '10px'} system-ui`;
         ctx.fillStyle = isSelected ? '#ffffff' : '#cbd5e1';
         ctx.textAlign = 'center';
         ctx.fillText(node.holderName || node.id, node.x, node.y + radius + 14);
-
-        // Subtitle (e.g. Risk score or Account ID)
-        if (node.label === 'Account') {
-          ctx.font = '9px monospace';
-          ctx.fillStyle = node.riskScore > 75 ? '#f87171' : '#94a3b8';
-          ctx.fillText(`Risk: ${node.riskScore}`, node.x, node.y + radius + 25);
-        }
       });
 
       ctx.restore();
