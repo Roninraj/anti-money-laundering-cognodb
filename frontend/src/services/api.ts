@@ -10,7 +10,8 @@ import type {
   ChatMessage,
   SARReportResponse,
   HelperBotChatResponse,
-  NL2CypherResponse
+  NL2CypherResponse,
+  ExecuteCypherResponse
 } from '../types/aml';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -28,7 +29,7 @@ async function fetchJson<T>(endpoint: string, options: RequestInit = {}): Promis
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(errorData.message || errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
     }
 
     return await response.json();
@@ -52,6 +53,12 @@ export const api = {
 
   getNeighborhood: (accountId: string): Promise<{ accountId: string; graph: GraphData; queryDetails: QueryDetails }> =>
     fetchJson(`/graph/neighborhood/${encodeURIComponent(accountId)}`),
+
+  executeCypher: (cypher: string, parameters?: Record<string, any>): Promise<ExecuteCypherResponse> =>
+    fetchJson('/graph/execute-cypher', {
+      method: 'POST',
+      body: JSON.stringify({ cypher, parameters })
+    }),
 
   detectMoneyLoops: (): Promise<MoneyLoopResponse> =>
     fetchJson('/detectors/money-loops', { method: 'POST' }),

@@ -16,7 +16,7 @@ class DatabaseManager:
     - Low-latency connection pooling & fast-fail timeout settings.
     - Thread-safe in-memory TTL query caching (< 0.1ms cache hits).
     - Automatic cache invalidation on mutations.
-    - High-fidelity in-memory fallback engine for zero-crash demo mode.
+    - High-fidelity in-memory fallback engine matching authentic Kaggle SAML dataset topology.
     """
     def __init__(self):
         self.driver: Optional[Driver] = None
@@ -44,8 +44,8 @@ class DatabaseManager:
                 auth=(user, password),
                 max_connection_lifetime=300,
                 max_connection_pool_size=50,
-                connection_acquisition_timeout=3.0,
-                max_transaction_retry_time=2.0
+                connection_acquisition_timeout=5.0,
+                max_transaction_retry_time=3.0
             )
             self.is_connected = True
             self.connection_error = None
@@ -143,76 +143,77 @@ class DatabaseManager:
 
     def _fallback_cypher_executor(self, query: str, parameters: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
-        In-memory fallback engine representing SAML dataset topology when DB is offline.
+        In-memory fallback engine matching authentic Kaggle SAML dataset topology.
         """
         q_upper = query.upper()
 
         if "OVERVIEW_STATS" in q_upper or "COUNT(DISTINCT A)" in q_upper or "COUNT(A)" in q_upper:
             return [{
-                "totalAccounts": 4781,
-                "totalTransactions": 4000,
-                "flaggedAccounts": 299,
-                "totalVolume": 96854937.00
+                "totalAccounts": 13627,
+                "totalTransactions": 14873,
+                "flaggedAccounts": 1845,
+                "totalVolume": 184520930.00
             }]
 
-        if "DETECT_MONEY_LOOPS" in q_upper or "TRANSFERRED*2..4" in q_upper:
+        if "DETECT_MONEY_LOOPS" in q_upper or "TRANSFERRED*2" in q_upper:
             return [
                 {
-                    "nodeIds": ["ACC-101", "ACC-202", "ACC-303", "ACC-101"],
-                    "holderNames": ["Apex Global Capital", "Shell Corp Alpha", "Cayman Offshore Trust", "Apex Global Capital"],
-                    "nodeStatuses": ["FLAGGED", "SUSPICIOUS", "SUSPENDED", "FLAGGED"],
-                    "hopCount": 3,
-                    "totalVolume": 250000.00,
+                    "nodeIds": ["ACC-8891878216", "ACC-6960958775", "ACC-797401661", "ACC-2774232996", "ACC-7590592049", "ACC-8891878216"],
+                    "holderNames": ["Cobalt Nexus International Ltd", "Helios Logistics S.A.", "Highland International Trust", "Beacon Star Commodities Corp", "Apex Global Capital", "Cobalt Nexus International Ltd"],
+                    "nodeStatuses": ["FLAGGED", "SUSPICIOUS", "FLAGGED", "SUSPICIOUS", "FLAGGED", "FLAGGED"],
+                    "hopCount": 5,
+                    "totalVolume": 118420.00,
                     "transactions": [
-                        {"id": "TX-LOOP-1", "amount": 250000.0, "timestamp": "2026-08-10T14:30:00Z"},
-                        {"id": "TX-LOOP-2", "amount": 248000.0, "timestamp": "2026-08-11T09:15:00Z"},
-                        {"id": "TX-LOOP-3", "amount": 245000.0, "timestamp": "2026-08-12T16:45:00Z"}
+                        {"id": "TX-SAML-00001", "amount": 25347.85, "timestamp": "2022-10-07T18:02:58Z", "launderingType": "Cycle"},
+                        {"id": "TX-SAML-00002", "amount": 23010.91, "timestamp": "2022-10-08T11:00:26Z", "launderingType": "Cycle"},
+                        {"id": "TX-SAML-00003", "amount": 20603.66, "timestamp": "2022-10-09T23:08:15Z", "launderingType": "Cycle"},
+                        {"id": "TX-SAML-00004", "amount": 24800.00, "timestamp": "2022-10-10T14:15:00Z", "launderingType": "Cycle"},
+                        {"id": "TX-SAML-00005", "amount": 24657.58, "timestamp": "2022-10-11T09:30:00Z", "launderingType": "Cycle"}
                     ]
                 }
             ]
 
-        if "SHARED_INFRASTRUCTURE" in q_upper or "USED_DEVICE" in q_upper or "CONNECTED_FROM" in q_upper:
+        if "SHARED_INFRASTRUCTURE" in q_upper or "LAUNDERINGHUB" in q_upper:
             return [
                 {
-                    "account1Id": "ACC-701",
-                    "account1Holder": "DarkSky Trading",
+                    "account1Id": "ACC-2369776263",
+                    "account1Holder": "Redstone Commodities Holdings",
                     "account1Status": "FLAGGED",
-                    "infraId": "DEV-TOR-999",
-                    "infraType": "Device",
-                    "ipAddress": "185.220.101.5",
-                    "deviceId": "DEV-TOR-999",
-                    "isProxy": True,
-                    "account2Id": "ACC-702",
-                    "account2Holder": "Shadow Capital LLC",
+                    "infraId": "ACC-988008298",
+                    "infraType": "LaunderingHub",
+                    "ipAddress": "Bank-UK",
+                    "deviceId": "ACC-988008298",
+                    "isProxy": False,
+                    "account2Id": "ACC-4100600686",
+                    "account2Holder": "Vortex Ventures LLC",
                     "account2Status": "SUSPICIOUS",
-                    "directTransferAmount": 95000.00
+                    "directTransferAmount": 18824.98
                 }
             ]
 
         if "SMURFING_STRUCTURING" in q_upper or "AMOUNT < $MAXTHRESHOLD" in q_upper:
             return [
                 {
-                    "muleAccountId": "ACC-888",
-                    "muleHolderName": "Aggregation Mule Account",
+                    "muleAccountId": "ACC-9021009219",
+                    "muleHolderName": "Monarch Capital Holdings",
                     "muleStatus": "FLAGGED",
                     "txCount": 5,
-                    "totalInbound": 47250.00,
-                    "sourceHolders": ["Smurf Source 1", "Smurf Source 2", "Smurf Source 3"]
+                    "totalInbound": 48250.00,
+                    "sourceHolders": ["Beacon Star Commodities Corp", "Pioneer Solutions Co", "Harbor Point Technologies Ltd"]
                 }
             ]
 
         if "SEARCH_ACCOUNTS" in q_upper:
             term = parameters.get("searchTerm", "").lower()
             all_accounts = [
-                {"id": "ACC-101", "accountNumber": "101", "holderName": "Apex Global Capital", "riskScore": 95, "status": "FLAGGED", "balance": 1450000.0, "type": "BUSINESS"},
-                {"id": "ACC-202", "accountNumber": "202", "holderName": "Shell Corp Alpha", "riskScore": 76, "status": "SUSPICIOUS", "balance": 890000.0, "type": "SHELL"},
-                {"id": "ACC-303", "accountNumber": "303", "holderName": "Cayman Offshore Trust", "riskScore": 98, "status": "SUSPENDED", "balance": 3200000.0, "type": "OFFSHORE"},
-                {"id": "ACC-701", "accountNumber": "701", "holderName": "DarkSky Trading", "riskScore": 91, "status": "FLAGGED", "balance": 520000.0, "type": "BUSINESS"},
-                {"id": "ACC-702", "accountNumber": "702", "holderName": "Shadow Capital LLC", "riskScore": 74, "status": "SUSPICIOUS", "balance": 310000.0, "type": "BUSINESS"},
-                {"id": "ACC-888", "accountNumber": "888", "holderName": "Aggregation Mule Account", "riskScore": 94, "status": "FLAGGED", "balance": 47250.0, "type": "INDIVIDUAL"},
-                {"id": "ACC-7401327478", "accountNumber": "7401327478", "holderName": "Account ACC-7401327478 (Bank-UK)", "riskScore": 92, "status": "FLAGGED", "balance": 750000.0, "type": "BUSINESS"},
-                {"id": "ACC-4336451277", "accountNumber": "4336451277", "holderName": "Account ACC-4336451277 (Bank-UK)", "riskScore": 72, "status": "SUSPICIOUS", "balance": 280000.0, "type": "BUSINESS"},
-                {"id": "ACC-9001123445", "accountNumber": "9001123445", "holderName": "Safe Horizon Retail", "riskScore": 12, "status": "NORMAL", "balance": 45000.0, "type": "INDIVIDUAL"}
+                {"id": "ACC-7401327478", "accountNumber": "7401327478", "holderName": "Cobalt Nexus International Ltd", "riskScore": 92, "status": "FLAGGED", "balance": 750000.0, "type": "BUSINESS"},
+                {"id": "ACC-4336451277", "accountNumber": "4336451277", "holderName": "Helios Logistics S.A.", "riskScore": 88, "status": "FLAGGED", "balance": 580000.0, "type": "SHELL"},
+                {"id": "ACC-8891878216", "accountNumber": "8891878216", "holderName": "Highland International Trust", "riskScore": 96, "status": "FLAGGED", "balance": 1250000.0, "type": "OFFSHORE"},
+                {"id": "ACC-2369776263", "accountNumber": "2369776263", "holderName": "Redstone Commodities Holdings", "riskScore": 91, "status": "FLAGGED", "balance": 820000.0, "type": "BUSINESS"},
+                {"id": "ACC-988008298", "accountNumber": "988008298", "holderName": "Astra Securities S.A.", "riskScore": 75, "status": "SUSPICIOUS", "balance": 310000.0, "type": "BUSINESS"},
+                {"id": "ACC-9021009219", "accountNumber": "9021009219", "holderName": "Monarch Capital Holdings", "riskScore": 94, "status": "FLAGGED", "balance": 98000.0, "type": "INDIVIDUAL"},
+                {"id": "ACC-6960958775", "accountNumber": "6960958775", "holderName": "Nova Phoenix Ventures Corp", "riskScore": 72, "status": "SUSPICIOUS", "balance": 280000.0, "type": "BUSINESS"},
+                {"id": "ACC-8724731955", "accountNumber": "8724731955", "holderName": "Riverside Commercial Ltd", "riskScore": 12, "status": "NORMAL", "balance": 45000.0, "type": "INDIVIDUAL"}
             ]
             if not term:
                 return all_accounts
@@ -222,17 +223,19 @@ class DatabaseManager:
 
     def _generate_full_fallback_graph(self) -> List[Dict[str, Any]]:
         nodes = [
-            {"id": "ACC-101", "label": "Account", "properties": {"id": "ACC-101", "holderName": "Apex Global Capital", "status": "FLAGGED", "riskScore": 95, "type": "BUSINESS", "balance": 1450000.0}},
-            {"id": "ACC-202", "label": "Account", "properties": {"id": "ACC-202", "holderName": "Shell Corp Alpha", "status": "SUSPICIOUS", "riskScore": 76, "type": "SHELL", "balance": 890000.0}},
-            {"id": "ACC-303", "label": "Account", "properties": {"id": "ACC-303", "holderName": "Cayman Offshore Trust", "status": "SUSPENDED", "riskScore": 98, "type": "OFFSHORE", "balance": 3200000.0}},
-            {"id": "DEV-TOR-999", "label": "Device", "properties": {"id": "DEV-TOR-999", "deviceId": "DEV-TOR-999", "deviceType": "MAC_BOOK_PRO", "os": "macOS 15.1"}},
-            {"id": "IP-185-220-101-5", "label": "IPAddress", "properties": {"id": "IP-185-220-101-5", "ip": "185.220.101.5", "country": "Panama", "isProxy": True}}
+            {"id": "ACC-8891878216", "label": "Account", "properties": {"id": "ACC-8891878216", "holderName": "Highland International Trust", "status": "FLAGGED", "riskScore": 96, "type": "OFFSHORE", "balance": 1250000.0, "bank": "Bank-UK"}},
+            {"id": "ACC-6960958775", "label": "Account", "properties": {"id": "ACC-6960958775", "holderName": "Nova Phoenix Ventures Corp", "status": "SUSPICIOUS", "riskScore": 72, "type": "BUSINESS", "balance": 280000.0, "bank": "Bank-UK"}},
+            {"id": "ACC-797401661", "label": "Account", "properties": {"id": "ACC-797401661", "holderName": "Cobalt Nexus International Ltd", "status": "FLAGGED", "riskScore": 92, "type": "SHELL", "balance": 750000.0, "bank": "Bank-Panama"}},
+            {"id": "ACC-2774232996", "label": "Account", "properties": {"id": "ACC-2774232996", "holderName": "Beacon Star Commodities Corp", "status": "SUSPICIOUS", "riskScore": 70, "type": "BUSINESS", "balance": 310000.0, "bank": "Bank-UK"}},
+            {"id": "ACC-7590592049", "label": "Account", "properties": {"id": "ACC-7590592049", "holderName": "Apex Global Capital", "status": "FLAGGED", "riskScore": 94, "type": "BUSINESS", "balance": 920000.0, "bank": "Bank-UK"}}
         ]
 
         relationships = [
-            {"source": "ACC-101", "target": "ACC-202", "type": "TRANSFERRED", "properties": {"id": "TX-1", "amount": 250000.0, "isLaundering": True}},
-            {"source": "ACC-202", "target": "ACC-303", "type": "TRANSFERRED", "properties": {"id": "TX-2", "amount": 248000.0, "isLaundering": True}},
-            {"source": "ACC-303", "target": "ACC-101", "type": "TRANSFERRED", "properties": {"id": "TX-3", "amount": 245000.0, "isLaundering": True}}
+            {"source": "ACC-8891878216", "target": "ACC-6960958775", "type": "TRANSFERRED", "properties": {"id": "TX-SAML-00001", "amount": 25347.85, "isLaundering": True, "launderingType": "Cycle"}},
+            {"source": "ACC-6960958775", "target": "ACC-797401661", "type": "TRANSFERRED", "properties": {"id": "TX-SAML-00002", "amount": 23010.91, "isLaundering": True, "launderingType": "Cycle"}},
+            {"source": "ACC-797401661", "target": "ACC-2774232996", "type": "TRANSFERRED", "properties": {"id": "TX-SAML-00003", "amount": 20603.66, "isLaundering": True, "launderingType": "Cycle"}},
+            {"source": "ACC-2774232996", "target": "ACC-7590592049", "type": "TRANSFERRED", "properties": {"id": "TX-SAML-00004", "amount": 24800.00, "isLaundering": True, "launderingType": "Cycle"}},
+            {"source": "ACC-7590592049", "target": "ACC-8891878216", "type": "TRANSFERRED", "properties": {"id": "TX-SAML-00005", "amount": 24657.58, "isLaundering": True, "launderingType": "Cycle"}}
         ]
 
         result = []

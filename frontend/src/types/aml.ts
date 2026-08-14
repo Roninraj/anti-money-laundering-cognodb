@@ -20,6 +20,7 @@ export interface GraphNode {
   riskScore: number;
   balance: number;
   type: string;
+  bank?: string;
   ip?: string;
   deviceId?: string;
   isProxy?: boolean;
@@ -39,6 +40,9 @@ export interface GraphLink {
   type: string;
   amount: number;
   isLaundering: boolean;
+  launderingType?: string;
+  paymentFormat?: string;
+  timestamp?: string;
 }
 
 export interface GraphData {
@@ -69,6 +73,18 @@ export interface QueryDetails {
   executionTimeMs: number;
 }
 
+export interface ExecuteCypherResponse {
+  success: boolean;
+  error?: string;
+  count: number;
+  columns: string[];
+  results: any[];
+  graph?: GraphData | null;
+  executionTimeMs: number;
+  query: string;
+  parameters?: Record<string, any>;
+}
+
 export interface MoneyLoopItem {
   nodeIds: string[];
   holderNames: string[];
@@ -79,6 +95,7 @@ export interface MoneyLoopItem {
     id: string;
     amount: number;
     timestamp: string;
+    launderingType?: string;
   }>;
 }
 
@@ -86,6 +103,7 @@ export interface MoneyLoopResponse {
   detector: string;
   detectedCount: number;
   loops: MoneyLoopItem[];
+  graph?: GraphData;
   queryDetails: QueryDetails;
 }
 
@@ -108,6 +126,7 @@ export interface SharedInfraResponse {
   detector: string;
   detectedCount: number;
   sharedRings: SharedInfraItem[];
+  graph?: GraphData;
   queryDetails: QueryDetails;
 }
 
@@ -124,6 +143,7 @@ export interface SmurfingResponse {
   detector: string;
   detectedCount: number;
   smurfingRings: SmurfingItem[];
+  graph?: GraphData;
   queryDetails: QueryDetails;
 }
 
@@ -148,10 +168,31 @@ export interface AccountDetailsResponse {
   }>;
 }
 
+export interface AgentStep {
+  name: string;
+  status: 'COMPLETED' | 'RUNNING' | 'PENDING';
+  detail: string;
+  tool?: string;
+  cypher?: string;
+  executionTimeMs?: number;
+}
+
+export interface AgentAction {
+  label: string;
+  action: 'GENERATE_SAR' | 'RENDER_GRAPH' | 'SEND_MESSAGE' | 'OPEN_CYPHER';
+  payload?: any;
+  accountId?: string;
+  prompt?: string;
+}
+
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   suggestedCypher?: string;
+  thoughtProcess?: string;
+  steps?: AgentStep[];
+  queryResults?: ExecuteCypherResponse | null;
+  suggestedActions?: AgentAction[];
 }
 
 export interface SARReportResponse {
@@ -167,6 +208,10 @@ export interface SARReportResponse {
 export interface HelperBotChatResponse {
   reply: string;
   suggestedCypher?: string;
+  thoughtProcess?: string;
+  steps?: AgentStep[];
+  queryResults?: ExecuteCypherResponse | null;
+  suggestedActions?: AgentAction[];
   botName: string;
   executionTimeMs: number;
 }
@@ -176,5 +221,3 @@ export interface NL2CypherResponse {
   explanation: string;
   executionTimeMs: number;
 }
-
-

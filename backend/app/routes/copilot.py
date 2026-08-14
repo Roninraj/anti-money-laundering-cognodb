@@ -13,6 +13,7 @@ class SARRequest(BaseModel):
 class ChatMessage(BaseModel):
     role: str # 'user' | 'assistant'
     content: str
+    suggestedCypher: Optional[str] = None
 
 class ChatRequest(BaseModel):
     message: str
@@ -28,14 +29,15 @@ def generate_sar_report(payload: SARRequest):
     Generates a formal FinCEN-compliant Suspicious Activity Report (SAR) narrative for an account.
     """
     start_time = time.time()
-    account_id = payload.accountId
+    account_id = payload.accountId.strip()
+    if not account_id:
+        raise HTTPException(status_code=400, detail="Account ID cannot be empty.")
 
-    # 1. Fetch account and topology data from CognoDB
+    # 1. Fetch account details from CognoDB
     cypher = """
     MATCH (a:Account {id: $accountId})
-    OPTIONAL MATCH (c:Customer)-[:OWNS]->(a)
     OPTIONAL MATCH (a)-[t:TRANSFERRED]-(other:Account)
-    RETURN a, c, collect(DISTINCT {
+    RETURN a, collect(DISTINCT {
         txId: t.id,
         amount: t.amount,
         isLaundering: t.isLaundering,
@@ -43,23 +45,29 @@ def generate_sar_report(payload: SARRequest):
         counterparty: other.holderName
     }) AS transactions
     """
-    results = db_manager.execute_cypher(cypher, {"accountId": account_id}, use_cache=True, ttl_seconds=10)
+    results = db_manager.execute_cypher(cypher, {"accountId": account_id}, use_cache=True, ttl_seconds=30)
 
-    if not results:
-        # Fallback account search
+    if not results or not results[0].get("a"):
+        # Fallback account search by ID prefix or substring
         search_res = db_manager.execute_cypher("""
-        MATCH (a:Account {id: $accountId}) RETURN a
-        """, {"accountId": account_id}, use_cache=True, ttl_seconds=10)
+        MATCH (a:Account) WHERE a.id = $accountId OR a.accountNumber = $accountId RETURN a
+        """, {"accountId": account_id}, use_cache=True, ttl_seconds=30)
+        
         if not search_res:
             row = {
-                "a": {"id": account_id, "holderName": f"Account {account_id}", "status": "FLAGGED", "riskScore": 90, "balance": 500000.0, "type": "BUSINESS"},
-                "c": None,
-                "transactions": [
-                    {"txId": f"TX-{account_id}-1", "amount": 95000.0, "isLaundering": True, "timestamp": "2026-08-10T14:30:00Z", "counterparty": "Offshore Trust Alpha"}
-                ]
+                "a": {
+                    "id": account_id,
+                    "holderName": f"Account {account_id}",
+                    "status": "FLAGGED",
+                    "riskScore": 90,
+                    "balance": 500000.0,
+                    "type": "BUSINESS",
+                    "bank": "Bank-UK"
+                },
+                "transactions": []
             }
         else:
-            row = {"a": search_res[0].get("a"), "c": None, "transactions": []}
+            row = {"a": search_res[0].get("a"), "transactions": []}
     else:
         row = results[0]
 
@@ -71,13 +79,13 @@ def generate_sar_report(payload: SARRequest):
     laundering_tx_count = sum(1 for t in txs if t.get("isLaundering"))
     structuring_tx_count = sum(1 for t in txs if 8000 <= (t.get("amount") or 0) < 10000)
     total_vol = sum((t.get("amount") or 0) for t in txs)
-    acc_type = props.get("type", "INDIVIDUAL")
+    acc_type = props.get("type", "BUSINESS")
 
     risk_factors = {
-        "launderingScore": 35 + (laundering_tx_count * 5) if laundering_tx_count > 0 else 0,
+        "launderingScore": 35 + min(30, laundering_tx_count * 5) if laundering_tx_count > 0 else 0,
         "structuringScore": 20 if structuring_tx_count >= 2 else (10 if structuring_tx_count == 1 else 0),
         "volumeScore": 15 if total_vol > 500000 else (10 if total_vol > 100000 else 0),
-        "infrastructureScore": 15 if (props.get("ip") or props.get("deviceId") or props.get("status") in ["FLAGGED", "SUSPICIOUS"]) else 0,
+        "infrastructureScore": 15 if props.get("status") in ["FLAGGED", "SUSPICIOUS"] else 0,
         "entityScore": 15 if acc_type in ["SHELL", "OFFSHORE"] else (5 if acc_type == "BUSINESS" else 0)
     }
 

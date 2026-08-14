@@ -1,10 +1,15 @@
 import time
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from app.database import db_manager
 from app.cypher_queries import CYPHER_QUERIES
 
 router = APIRouter(prefix="/api/graph", tags=["Graph Network Topology"])
+
+class ExecuteCypherRequest(BaseModel):
+    cypher: str
+    parameters: Optional[Dict[str, Any]] = None
 
 def _extract_node(entity: Any) -> Optional[Dict[str, Any]]:
     """Helper to safely extract Node attributes directly from CognoDB."""
@@ -23,6 +28,7 @@ def _extract_node(entity: Any) -> Optional[Dict[str, Any]]:
             "riskScore": props.get("riskScore", 0),
             "balance": props.get("balance", 0.0),
             "type": props.get("type", "UNKNOWN"),
+            "bank": props.get("bank", "Bank-UK"),
             "ip": props.get("ip"),
             "deviceId": props.get("deviceId"),
             "isProxy": props.get("isProxy", False)
@@ -41,6 +47,7 @@ def _extract_node(entity: Any) -> Optional[Dict[str, Any]]:
             "riskScore": props.get("riskScore", 0),
             "balance": props.get("balance", 0.0),
             "type": props.get("type", "UNKNOWN"),
+            "bank": props.get("bank", "Bank-UK"),
             "ip": props.get("ip"),
             "deviceId": props.get("deviceId"),
             "isProxy": props.get("isProxy", False)
@@ -55,9 +62,9 @@ def _format_graph_response(raw_results: List[Dict[str, Any]]) -> Dict[str, Any]:
     links = []
 
     for row in raw_results:
-        n_raw = row.get("n") or row.get("a")
-        r_raw = row.get("r") or row.get("t")
-        m_raw = row.get("m") or row.get("neighbor") or row.get("infra")
+        n_raw = row.get("n") or row.get("a") or row.get("src") or row.get("source")
+        r_raw = row.get("r") or row.get("t") or row.get("rel") or row.get("transfer")
+        m_raw = row.get("m") or row.get("b") or row.get("tgt") or row.get("target") or row.get("neighbor") or row.get("infra")
 
         n_node = _extract_node(n_raw)
         m_node = _extract_node(m_raw)
@@ -90,7 +97,10 @@ def _format_graph_response(raw_results: List[Dict[str, Any]]) -> Dict[str, Any]:
                 "type": rel_type,
                 "amount": float(rel_props.get("amount", 0.0)) if isinstance(rel_props, dict) else 0.0,
                 "isLaundering": bool(rel_props.get("isLaundering", False)) if isinstance(rel_props, dict) else False,
-                "id": f"{src_id}-{tgt_id}"
+                "launderingType": rel_props.get("launderingType", "Normal") if isinstance(rel_props, dict) else "Normal",
+                "paymentFormat": rel_props.get("paymentFormat", "ACH") if isinstance(rel_props, dict) else "ACH",
+                "timestamp": rel_props.get("timestamp") if isinstance(rel_props, dict) else None,
+                "id": f"{src_id}-{tgt_id}-{rel_props.get('id', '')}"
             })
 
     return {
@@ -100,7 +110,7 @@ def _format_graph_response(raw_results: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 @router.get("/full")
 def get_full_graph():
-    """Fetches full AML network topology."""
+    """Fetches full AML network topology from authentic Kaggle dataset."""
     start_time = time.time()
     query_info = CYPHER_QUERIES["FULL_GRAPH"]
     results = db_manager.execute_cypher(query_info["cypher"], use_cache=True, ttl_seconds=15)
@@ -127,10 +137,10 @@ def get_neighborhood(account_id: str):
     
     records = []
     
-    # 1. Direct Outgoing & Attached Entities (1-hop)
+    # 1. Direct Outgoing Transfers (1-hop)
     q1 = """
-    MATCH (n) WHERE n.id = $accountId
-    OPTIONAL MATCH (n)-[r]->(m)
+    MATCH (n:Account {id: $accountId})
+    OPTIONAL MATCH (n)-[r:TRANSFERRED]->(m:Account)
     RETURN n, r, m
     LIMIT 50
     """
@@ -139,45 +149,23 @@ def get_neighborhood(account_id: str):
     
     # 2. Direct Incoming transfers (1-hop)
     q2 = """
-    MATCH (m) WHERE m.id = $accountId
-    MATCH (n)-[r]->(m)
+    MATCH (m:Account {id: $accountId})
+    MATCH (n:Account)-[r:TRANSFERRED]->(m)
     RETURN n, r, m
     LIMIT 50
     """
     r2 = db_manager.execute_cypher(q2, {"accountId": account_id}, use_cache=True, ttl_seconds=10)
     records.extend(r2)
     
-    # 3. 2-Hop Multi-Hop Transfers
+    # 3. 2-Hop Multi-Hop Transfers (Layering chains)
     q3 = """
-    MATCH (a:Account)-[:TRANSFERRED]->(n:Account)-[r:TRANSFERRED]->(m:Account)
-    WHERE a.id = $accountId AND m.id <> $accountId
+    MATCH (a:Account {id: $accountId})-[:TRANSFERRED]->(n:Account)-[r:TRANSFERRED]->(m:Account)
+    WHERE m.id <> $accountId
     RETURN n, r, m
     LIMIT 50
     """
     r3 = db_manager.execute_cypher(q3, {"accountId": account_id}, use_cache=True, ttl_seconds=10)
     records.extend(r3)
-
-    # 4. Extract attached Devices and IPs to find co-located network
-    device_ids = [row['m']['id'] for row in r1 if row.get('m') and 'DEV-' in str(row['m'].get('id', ''))]
-    ip_ids = [row['m']['id'] for row in r1 if row.get('m') and 'IP-' in str(row['m'].get('id', ''))]
-    
-    for dev_id in device_ids[:2]:
-        q_dev = """
-        MATCH (n:Account)-[r:USED_DEVICE]->(m:Device)
-        WHERE m.id = $devId AND n.id <> $accountId
-        RETURN n, r, m
-        LIMIT 15
-        """
-        records.extend(db_manager.execute_cypher(q_dev, {"devId": dev_id, "accountId": account_id}, use_cache=True, ttl_seconds=10))
-        
-    for ip_id in ip_ids[:2]:
-        q_ip = """
-        MATCH (n:Account)-[r:CONNECTED_FROM]->(m:IPAddress)
-        WHERE m.id = $ipId AND n.id <> $accountId
-        RETURN n, r, m
-        LIMIT 15
-        """
-        records.extend(db_manager.execute_cypher(q_ip, {"ipId": ip_id, "accountId": account_id}, use_cache=True, ttl_seconds=10))
 
     execution_time_ms = round((time.time() - start_time) * 1000, 2)
     graph_data = _format_graph_response(records)
@@ -192,6 +180,7 @@ def get_neighborhood(account_id: str):
             "riskScore": 10,
             "balance": 50000.0,
             "type": "BUSINESS",
+            "bank": "Bank-UK",
             "ip": None,
             "deviceId": None,
             "isProxy": False
@@ -202,10 +191,63 @@ def get_neighborhood(account_id: str):
         "graph": graph_data,
         "queryDetails": {
             "name": query_info["name"],
-            "cypher": f"MATCH (n) WHERE n.id = '{account_id}' OPTIONAL MATCH (n)-[r*1..2]-(m) RETURN n, r, m LIMIT 50",
+            "cypher": f"MATCH (n:Account {{id: '{account_id}'}}) OPTIONAL MATCH (n)-[r:TRANSFERRED*1..2]-(m:Account) RETURN n, r, m LIMIT 50",
             "parameters": {"accountId": account_id},
             "description": query_info["description"],
             "relationalComparison": query_info["relational_comparison"],
             "executionTimeMs": execution_time_ms
         }
     }
+
+@router.post("/execute-cypher")
+def execute_custom_cypher(payload: ExecuteCypherRequest):
+    """
+    Live Interactive Cypher Console Execution Endpoint.
+    Executes parameterized openCypher directly against CognoDB Cloud.
+    """
+    start_time = time.time()
+    query = payload.cypher.strip()
+    if not query:
+        raise HTTPException(status_code=400, detail="Cypher query cannot be empty.")
+    
+    q_upper = query.upper()
+    if "DROP DATABASE" in q_upper or "DROP CONSTRAINT" in q_upper:
+        raise HTTPException(status_code=403, detail="Destructive schema operations are restricted.")
+
+    try:
+        if any(w in q_upper for w in ["SET ", "CREATE ", "DELETE ", "MERGE ", "DETACH DELETE"]):
+            results = db_manager.execute_write_cypher(query, payload.parameters or {})
+        else:
+            results = db_manager.execute_cypher(query, payload.parameters or {}, use_cache=False)
+        
+        execution_time_ms = round((time.time() - start_time) * 1000, 2)
+        
+        columns = []
+        if results and isinstance(results[0], dict):
+            columns = list(results[0].keys())
+
+        graph_data = _format_graph_response(results)
+
+        return {
+            "success": True,
+            "count": len(results),
+            "columns": columns,
+            "results": results,
+            "graph": graph_data if graph_data["nodes"] else None,
+            "executionTimeMs": execution_time_ms,
+            "query": query,
+            "parameters": payload.parameters or {}
+        }
+    except Exception as e:
+        execution_time_ms = round((time.time() - start_time) * 1000, 2)
+        return {
+            "success": False,
+            "error": str(e),
+            "count": 0,
+            "columns": [],
+            "results": [],
+            "graph": None,
+            "executionTimeMs": execution_time_ms,
+            "query": query,
+            "parameters": payload.parameters or {}
+        }

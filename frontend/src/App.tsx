@@ -126,6 +126,10 @@ export const App: React.FC = () => {
       setDetectedCount(res.detectedCount);
       setActiveQuery(res.queryDetails);
 
+      if (res.graph && res.graph.nodes.length > 0) {
+        setGraphData(res.graph);
+      }
+
       // Collect all node IDs involved in circular loops
       const loopNodeIds = new Set<string>();
       res.loops.forEach(loop => {
@@ -133,7 +137,7 @@ export const App: React.FC = () => {
       });
 
       setHighlightedNodeIds(Array.from(loopNodeIds));
-      showToast(`Detected ${res.detectedCount} Circular Money Loop(s)!`, 'success');
+      showToast(`Detected ${res.detectedCount} Circular Money Loop(s)! Rendered on Canvas`, 'success');
     } catch (err) {
       showToast('Failed to run Money Loop detector', 'error');
     } finally {
@@ -151,6 +155,10 @@ export const App: React.FC = () => {
       setDetectedCount(res.detectedCount);
       setActiveQuery(res.queryDetails);
 
+      if (res.graph && res.graph.nodes.length > 0) {
+        setGraphData(res.graph);
+      }
+
       const infraNodeIds = new Set<string>();
       res.sharedRings.forEach(ring => {
         infraNodeIds.add(ring.account1Id);
@@ -159,7 +167,7 @@ export const App: React.FC = () => {
       });
 
       setHighlightedNodeIds(Array.from(infraNodeIds));
-      showToast(`Found ${res.detectedCount} Shared Device/IP Ring(s)!`, 'success');
+      showToast(`Found ${res.detectedCount} Multi-Branch Layering Hub(s)! Rendered on Canvas`, 'success');
     } catch (err) {
       showToast('Failed to analyze shared infrastructure', 'error');
     } finally {
@@ -177,13 +185,17 @@ export const App: React.FC = () => {
       setDetectedCount(res.detectedCount);
       setActiveQuery(res.queryDetails);
 
+      if (res.graph && res.graph.nodes.length > 0) {
+        setGraphData(res.graph);
+      }
+
       const smurfNodeIds = new Set<string>();
       res.smurfingRings.forEach(ring => {
         smurfNodeIds.add(ring.muleAccountId);
       });
 
       setHighlightedNodeIds(Array.from(smurfNodeIds));
-      showToast(`Detected ${res.detectedCount} Structuring Mule Ring(s)!`, 'success');
+      showToast(`Detected ${res.detectedCount} Structuring Mule Ring(s)! Rendered on Canvas`, 'success');
     } catch (err) {
       showToast('Failed to run Smurfing detector', 'error');
     } finally {
@@ -275,6 +287,10 @@ export const App: React.FC = () => {
         queryDetails={activeQuery}
         isOpen={isInspectorOpen}
         onClose={() => setIsInspectorOpen(false)}
+        onApplyGraphToCanvas={(customGraph, queryName) => {
+          setGraphData(customGraph);
+          showToast(`Rendered ${customGraph.nodes.length} nodes from ${queryName}`, 'success');
+        }}
       />
 
       {/* Floating AML HelperBot Trigger FAB */}

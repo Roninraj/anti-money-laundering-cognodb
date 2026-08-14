@@ -282,7 +282,7 @@ export const SearchDropdown: React.FC<SearchDropdownProps> = ({
                   No accounts found for <span className="text-red-400">"{query}"</span>
                 </p>
                 <p className="text-[11px] text-slate-500">
-                  Try searching by ID (e.g. <span className="font-mono text-slate-400">ACC-101</span>) or name
+                  Try searching by ID (e.g. <span className="font-mono text-slate-400">ACC-7401327478</span>) or name
                 </p>
               </div>
             )}
