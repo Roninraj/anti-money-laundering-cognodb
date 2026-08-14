@@ -56,6 +56,19 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     return base + bonus;
   };
 
+  // Helper: Clean and concise account name formatter
+  const formatDisplayName = (node: GraphNode): string => {
+    let name = node.holderName || node.id;
+    if (name.startsWith('Account ACC-')) {
+      const match = name.match(/ACC-\d+/);
+      if (match) return match[0];
+    }
+    if (name.length > 20) {
+      return name.substring(0, 18) + '…';
+    }
+    return name;
+  };
+
   // Setup D3 Force Simulation & Render Loop
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
@@ -70,17 +83,17 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     canvas.height = height * dpr;
 
     // Reset center transform
-    transformRef.current = { x: width / 2, y: height / 2, k: 1 };
+    transformRef.current = { x: width / 2, y: height / 2, k: 0.9 };
 
     // Deep clone data to avoid mutating original props in D3
     const nodes: GraphNode[] = data.nodes.map(n => ({ ...n }));
     const links: GraphLink[] = data.links.map(l => ({ ...l }));
 
     const sim = d3.forceSimulation<GraphNode>(nodes)
-      .force('link', d3.forceLink<GraphNode, GraphLink>(links).id(d => d.id).distance(120))
-      .force('charge', d3.forceManyBody().strength(-350))
+      .force('link', d3.forceLink<GraphNode, GraphLink>(links).id(d => d.id).distance(180))
+      .force('charge', d3.forceManyBody().strength(-600))
       .force('center', d3.forceCenter(0, 0))
-      .force('collide', d3.forceCollide<GraphNode>().radius(d => getNodeRadius(d) + 15))
+      .force('collide', d3.forceCollide<GraphNode>().radius(d => getNodeRadius(d) + 32))
       .alphaDecay(0.02);
 
     simulationRef.current = sim;
@@ -124,11 +137,11 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
           ctx.strokeStyle = '#f43f5e'; // Highlighted Fraud Loop Path
           ctx.lineWidth = 3.5;
         } else if (link.isLaundering) {
-          ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)';
-          ctx.lineWidth = 2.5;
+          ctx.strokeStyle = 'rgba(239, 68, 68, 0.65)';
+          ctx.lineWidth = 2.2;
         } else {
-          ctx.strokeStyle = 'rgba(71, 85, 105, 0.4)';
-          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = 'rgba(71, 85, 105, 0.35)';
+          ctx.lineWidth = 1.2;
         }
 
         ctx.stroke();
@@ -143,11 +156,11 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
             const normY = dy / dist;
             ctx.fillStyle = isHighlighted ? '#fda4af' : link.isLaundering ? '#ef4444' : '#38bdf8';
 
-            for (let d = particleOffset; d < dist - 15; d += 35) {
+            for (let d = particleOffset; d < dist - 15; d += 45) {
               const px = source.x + normX * d;
               const py = source.y + normY * d;
               ctx.beginPath();
-              ctx.arc(px, py, isHighlighted ? 3 : 2, 0, 2 * Math.PI);
+              ctx.arc(px, py, isHighlighted ? 3 : 1.8, 0, 2 * Math.PI);
               ctx.fill();
             }
           }
@@ -162,6 +175,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         const color = getNodeColor(node);
         const isSelected = selectedNode?.id === node.id;
         const isHighlighted = highlightedNodeIds.includes(node.id);
+        const isHighRisk = (node.riskScore || 0) >= 70 || node.status === 'FLAGGED' || node.status === 'SUSPENDED';
 
         // Draw Outer Glowing Halo for Selected or Highlighted Nodes
         if (isSelected || isHighlighted) {
@@ -183,11 +197,26 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         ctx.strokeStyle = '#0f172a';
         ctx.stroke();
 
-        // Node Label Text (Only account name, nothing else)
-        ctx.font = `${isSelected ? 'bold 11px' : '10px'} system-ui`;
-        ctx.fillStyle = isSelected ? '#ffffff' : '#cbd5e1';
-        ctx.textAlign = 'center';
-        ctx.fillText(node.holderName || node.id, node.x, node.y + radius + 14);
+        // Node Label Text (Decluttered, only concise name with dark pill)
+        const shouldShowLabel = tk >= 0.5 || isSelected || isHighlighted || isHighRisk;
+        if (shouldShowLabel) {
+          const displayName = formatDisplayName(node);
+          ctx.font = `${isSelected ? 'bold 11px' : '10px'} system-ui, -apple-system, sans-serif`;
+          const textWidth = ctx.measureText(displayName).width;
+          const labelY = node.y + radius + 13;
+
+          // Background pill
+          ctx.fillStyle = isSelected ? 'rgba(15, 23, 42, 0.95)' : 'rgba(15, 23, 42, 0.8)';
+          ctx.beginPath();
+          ctx.roundRect ? ctx.roundRect(node.x - textWidth / 2 - 4, labelY - 9, textWidth + 8, 14, 4) :
+            ctx.rect(node.x - textWidth / 2 - 4, labelY - 9, textWidth + 8, 14);
+          ctx.fill();
+
+          // Text fill
+          ctx.fillStyle = isSelected ? '#ffffff' : isHighRisk ? '#fca5a5' : '#cbd5e1';
+          ctx.textAlign = 'center';
+          ctx.fillText(displayName, node.x, labelY + 2);
+        }
       });
 
       ctx.restore();
