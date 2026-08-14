@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
-import { ShieldAlert, Database, Search, Terminal, RefreshCw } from 'lucide-react';
-import type { ConnectionStatus, QueryDetails } from '../types/aml';
+import React from 'react';
+import { ShieldAlert, Database, Terminal, RefreshCw } from 'lucide-react';
+import { SearchDropdown } from './SearchDropdown';
+import type { ConnectionStatus, QueryDetails, SearchAccountResult } from '../types/aml';
 
 interface HeaderProps {
   connection: ConnectionStatus | null;
   activeQuery: QueryDetails | null;
   onOpenInspector: () => void;
-  onSearch: (term: string) => void;
+  onSelectAccount: (account: SearchAccountResult, queryDetails?: QueryDetails) => void;
   onResetGraph: () => void;
 }
 
@@ -14,18 +15,9 @@ export const Header: React.FC<HeaderProps> = ({
   connection,
   activeQuery,
   onOpenInspector,
-  onSearch,
+  onSelectAccount,
   onResetGraph
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchTerm.trim()) {
-      onSearch(searchTerm.trim());
-    }
-  };
-
   const isOnline = connection?.status === 'ONLINE';
 
   return (
@@ -50,17 +42,11 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Middle: Search Bar */}
-      <form onSubmit={handleSearchSubmit} className="relative w-80 max-w-xs">
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search Account ID or Holder..."
-          className="w-full bg-slate-900/80 text-xs text-slate-200 placeholder-slate-500 pl-9 pr-4 py-2 rounded-lg border border-slate-700/70 focus:outline-none focus:border-red-500/70 focus:ring-1 focus:ring-red-500/30 transition"
-        />
-        <Search className="w-4 h-4 text-slate-500 absolute left-2.5 top-2.5" />
-      </form>
+      {/* Middle: Interactive Search Dropdown */}
+      <SearchDropdown
+        onSelectAccount={onSelectAccount}
+        onOpenInspector={onOpenInspector}
+      />
 
       {/* Right Controls & Connection Status */}
       <div className="flex items-center space-x-3">

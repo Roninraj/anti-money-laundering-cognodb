@@ -15,7 +15,8 @@ import type {
   QueryDetails,
   MoneyLoopResponse,
   SharedInfraResponse,
-  SmurfingResponse
+  SmurfingResponse,
+  SearchAccountResult
 } from './types/aml';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
@@ -78,26 +79,19 @@ export const App: React.FC = () => {
     loadInitialData();
   }, [loadInitialData]);
 
-  // Handler 1: Search Accounts
-  const handleSearch = async (term: string) => {
-    try {
-      const res = await api.searchAccounts(term);
-      setActiveQuery(res.queryDetails);
-      if (res.results.length > 0) {
-        const foundId = res.results[0].id;
-        const matchingNode = graphData.nodes.find(n => n.id === foundId);
-        if (matchingNode) {
-          setSelectedNode(matchingNode);
-          showToast(`Found account: ${matchingNode.holderName}`, 'success');
-        } else {
-          // Fetch neighborhood for search result
-          handleExpandNeighborhood(foundId);
-        }
-      } else {
-        showToast(`No accounts matching "${term}"`, 'info');
-      }
-    } catch (err) {
-      showToast('Search query failed', 'error');
+  // Handler 1: Select Account from Search Dropdown
+  const handleSelectAccount = (account: SearchAccountResult, queryDetails?: QueryDetails) => {
+    if (queryDetails) {
+      setActiveQuery(queryDetails);
+    }
+
+    const matchingNode = graphData.nodes.find(n => n.id === account.id);
+    if (matchingNode) {
+      setSelectedNode(matchingNode);
+      showToast(`Selected account: ${matchingNode.holderName}`, 'success');
+    } else {
+      // If node is not currently in the visible canvas graph, fetch its 1-2 hop neighborhood
+      handleExpandNeighborhood(account.id);
     }
   };
 
@@ -225,7 +219,7 @@ export const App: React.FC = () => {
         connection={connection}
         activeQuery={activeQuery}
         onOpenInspector={() => setIsInspectorOpen(true)}
-        onSearch={handleSearch}
+        onSelectAccount={handleSelectAccount}
         onResetGraph={handleReset}
       />
 

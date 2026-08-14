@@ -2,6 +2,16 @@ export type RiskStatus = 'NORMAL' | 'SUSPICIOUS' | 'FLAGGED' | 'SUSPENDED';
 
 export type NodeType = 'Account' | 'Customer' | 'Device' | 'IPAddress';
 
+export interface SearchAccountResult {
+  id: string;
+  accountNumber?: string;
+  holderName: string;
+  riskScore: number;
+  status: RiskStatus;
+  balance: number;
+  type: string;
+}
+
 export interface GraphNode {
   id: string;
   label: NodeType;

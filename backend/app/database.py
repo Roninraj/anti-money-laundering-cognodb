@@ -152,12 +152,19 @@ class DatabaseManager:
         if "SEARCH_ACCOUNTS" in q_upper:
             term = parameters.get("searchTerm", "").lower()
             all_accounts = [
+                {"id": "ACC-101", "accountNumber": "101", "holderName": "Apex Global Capital", "riskScore": 92, "status": "FLAGGED", "balance": 1450000.0, "type": "BUSINESS"},
+                {"id": "ACC-202", "accountNumber": "202", "holderName": "Shell Corp Alpha", "riskScore": 88, "status": "SUSPICIOUS", "balance": 890000.0, "type": "SHELL"},
+                {"id": "ACC-303", "accountNumber": "303", "holderName": "Cayman Offshore Trust", "riskScore": 95, "status": "SUSPENDED", "balance": 3200000.0, "type": "OFFSHORE"},
+                {"id": "ACC-701", "accountNumber": "701", "holderName": "DarkSky Trading", "riskScore": 91, "status": "FLAGGED", "balance": 520000.0, "type": "BUSINESS"},
+                {"id": "ACC-702", "accountNumber": "702", "holderName": "Shadow Capital LLC", "riskScore": 84, "status": "SUSPICIOUS", "balance": 310000.0, "type": "BUSINESS"},
+                {"id": "ACC-888", "accountNumber": "888", "holderName": "Aggregation Mule Account", "riskScore": 94, "status": "FLAGGED", "balance": 47250.0, "type": "INDIVIDUAL"},
                 {"id": "ACC-7401327478", "accountNumber": "7401327478", "holderName": "Account ACC-7401327478 (Bank-UK)", "riskScore": 92, "status": "FLAGGED", "balance": 750000.0, "type": "BUSINESS"},
-                {"id": "ACC-4336451277", "accountNumber": "4336451277", "holderName": "Account ACC-4336451277 (Bank-UK)", "riskScore": 88, "status": "FLAGGED", "balance": 750000.0, "type": "BUSINESS"}
+                {"id": "ACC-4336451277", "accountNumber": "4336451277", "holderName": "Account ACC-4336451277 (Bank-UK)", "riskScore": 88, "status": "FLAGGED", "balance": 750000.0, "type": "BUSINESS"},
+                {"id": "ACC-9001123445", "accountNumber": "9001123445", "holderName": "Safe Horizon Retail", "riskScore": 12, "status": "NORMAL", "balance": 45000.0, "type": "INDIVIDUAL"}
             ]
             if not term:
                 return all_accounts
-            return [a for a in all_accounts if term in a["holderName"].lower() or term in a["id"].lower()]
+            return [a for a in all_accounts if term in a["holderName"].lower() or term in a["id"].lower() or term in str(a.get("accountNumber", "")).lower()]
 
         return self._generate_full_fallback_graph()
 

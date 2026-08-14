@@ -3,7 +3,7 @@
 > **Take-Home Assignment Submission**  
 > **Database Layer**: [CognoDB Cloud](https://console.cognodb.com) (openCypher over Bolt protocol via official Neo4j driver)  
 > **Dataset**: [SAML — Synthetic Transaction Monitoring Dataset for AML](https://www.kaggle.com/datasets/berkanoztas/synthetic-transaction-monitoring-dataset-aml)  
-> **Tech Stack**: FastAPI (Python 3.14), React + Vite + TypeScript, Canvas Force Graph (`d3-force`), Docker & Docker Compose  
+> **Tech Stack**: FastAPI (Python), React + Vite + TypeScript, Canvas Force Graph (`d3-force`), Tailwind CSS, openCypher  
 
 ---
 
@@ -119,58 +119,44 @@ LIMIT 50
 
 ---
 
-## 5. Quickstart & Installation Guide
+## 5. Quickstart & How to Run (Separate Terminals)
 
-### Option A: Docker Compose (Recommended)
-
-Run the full stack (FastAPI backend + React frontend + Nginx proxy) with a single command:
+### Terminal 1: Backend & API Server
 
 ```bash
-# 1. Clone repository
-git clone https://github.com/Roninraj/anti-money-laundering-cognodb.git
-cd anti-money-laundering-cognodb
-
-# 2. Configure credentials in .env
-cp .env.example .env
-# Edit .env with your CognoDB Cloud URI and Password
-
-# 3. Build and launch containers
-docker compose up --build
-```
-Access the application UI at **`http://localhost`** (or backend API docs at `http://localhost:8000/docs`).
-
----
-
-### Option B: Local Development Setup
-
-#### 1. Backend & Data Seeding
-```bash
-# Set up Python virtual environment
+# 1. Navigate to backend directory
 cd backend
+
+# 2. Create and activate Python virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
 
-# Install dependencies
+# 3. Install backend dependencies
 pip install -r requirements.txt
 
-# Seed SAML dataset into CognoDB Cloud instance
+# 4. (Optional) Seed SAML dataset into CognoDB Cloud instance
 python scripts/seed_data.py
 
-# Start FastAPI dev server
+# 5. Start FastAPI development server
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
+The FastAPI server will be active at **`http://localhost:8000`** (Interactive Swagger documentation available at `http://localhost:8000/docs`).
 
-#### 2. Frontend Web Application
+---
+
+### Terminal 2: Frontend Web Application
+
 ```bash
+# 1. Open a new terminal and navigate to frontend directory
 cd frontend
 
-# Install Node packages
+# 2. Install Node dependencies
 npm install
 
-# Start Vite dev server
+# 3. Start Vite development server
 npm run dev
 ```
-Access the Vite dev server at **`http://localhost:5173`**.
+The application UI will be live at **`http://localhost:5173`**.
 
 ---
 
@@ -203,8 +189,8 @@ anti-money-laundering-cognodb/
 │   │   └── routes/              # Overview, Graph, Detectors, Accounts API
 │   ├── scripts/
 │   │   ├── saml_sample.csv      # SAML AML dataset sample
-│   │   └── seed_data.py         # Automated graph seeder script
-│   ├── Dockerfile
+│   │   ├── seed_data.py         # Automated graph seeder script
+│   │   └── load_saml_kaggle.py  # Kaggle SAML dataset loader
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
@@ -214,11 +200,12 @@ anti-money-laundering-cognodb/
 │   │   │   ├── GraphCanvas.tsx  # D3 force canvas visualization
 │   │   │   ├── NodeDetailsPanel.tsx # Slide-over inspector drawer
 │   │   │   ├── FraudDetectorControls.tsx # Detector command deck
-│   │   │   └── CypherInspector.tsx   # Live Cypher query inspector modal
+│   │   │   ├── CypherInspector.tsx   # Live Cypher query inspector modal
+│   │   │   └── LoadingSkeleton.tsx
 │   │   ├── services/api.ts
 │   │   └── App.tsx
-│   ├── Dockerfile
-│   └── nginx.conf
-├── docker-compose.yml
+│   ├── package.json
+│   └── vite.config.ts
+├── .env.example
 └── README.md
 ```
