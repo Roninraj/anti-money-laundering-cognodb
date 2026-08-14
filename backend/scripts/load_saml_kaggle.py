@@ -9,6 +9,7 @@ scatter-gather rings, and seeds CognoDB Cloud using openCypher UNWIND batching.
 import os
 import sys
 import csv
+import hashlib
 import argparse
 import logging
 from pathlib import Path
@@ -150,10 +151,20 @@ def load_saml_dataset(csv_path: str = DEFAULT_KAGGLE_CSV, max_laundering: int = 
                 acc_type = "INDIVIDUAL"
                 balance = 32000.0
 
+            # Deterministic distinct company name mapping
+            h_int = int(hashlib.sha256(acc_id.encode("utf-8")).hexdigest(), 16)
+            prefixes = ["Apex", "Vortex", "Blackwood", "Shadow Peak", "Nova Phoenix", "Omni Matrix", "Ironclad", "DarkSky", "Cayman Star", "Panama Merchant", "Helios", "Silverline", "Titan Meridian", "Zenith", "BlueStar", "Orion", "Cobalt Nexus", "Starlight", "Aero Dynamic", "Pacific Maritime", "Beacon Star", "Valiant", "Monarch", "Summit Global", "Atlas", "Aurora", "Riverside", "Greenleaf", "Horizon", "Beacon", "Skyline", "Pinnacle", "Golden Oak", "Crestview", "Sterling", "Redwood", "Quantum Core", "Solaria", "Nexus Prime", "Evergreen", "Harbor Point"]
+            middles = ["Global", "Capital", "Logistics", "Holdings", "Ventures", "Trading", "Commercial", "Partners", "Financial", "Enterprises", "Industries", "Technologies", "Energy", "Maritime", "Aerospace", "Biotech", "Real Estate", "Commodities", "Securities", "Investments", "International", "Solutions"]
+            suffixes = ["Ltd", "Corp", "Inc", "LLC", "Group", "PLC", "GmbH", "S.A.", "Trust", "Holdings", "Ventures", "Co"]
+            p = prefixes[h_int % len(prefixes)]
+            m = middles[(h_int // len(prefixes)) % len(middles)]
+            s = suffixes[(h_int // (len(prefixes) * len(middles))) % len(suffixes)]
+            comp_name = f"{p} {m} {s}"
+
             accounts_dict[acc_id] = {
                 "id": acc_id,
                 "accountNumber": acc_id.replace("ACC-", ""),
-                "holderName": f"Account {acc_id} ({stat['bank']})",
+                "holderName": comp_name,
                 "bank": stat["bank"],
                 "status": status,
                 "riskScore": final_score,
