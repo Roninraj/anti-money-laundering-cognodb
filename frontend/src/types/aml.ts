@@ -148,3 +148,33 @@ export interface AccountDetailsResponse {
   }>;
 }
 
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  suggestedCypher?: string;
+}
+
+export interface SARReportResponse {
+  accountId: string;
+  holderName: string;
+  riskScore: number;
+  status: RiskStatus;
+  sarNarrative: string;
+  generatedBy: string;
+  executionTimeMs: number;
+}
+
+export interface HelperBotChatResponse {
+  reply: string;
+  suggestedCypher?: string;
+  botName: string;
+  executionTimeMs: number;
+}
+
+export interface NL2CypherResponse {
+  cypher: string;
+  explanation: string;
+  executionTimeMs: number;
+}
+
+

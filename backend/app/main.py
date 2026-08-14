@@ -6,7 +6,7 @@ import logging
 
 from app.config import settings
 from app.database import db_manager
-from app.routes import overview, graph, detectors, accounts
+from app.routes import overview, graph, detectors, accounts, copilot
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("aml_app")
@@ -52,6 +52,7 @@ app.include_router(overview.router)
 app.include_router(graph.router)
 app.include_router(detectors.router)
 app.include_router(accounts.router)
+app.include_router(copilot.router)
 
 @app.get("/")
 def root():

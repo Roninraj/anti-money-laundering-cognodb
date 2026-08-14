@@ -6,7 +6,11 @@ import type {
   MoneyLoopResponse,
   SharedInfraResponse,
   SmurfingResponse,
-  AccountDetailsResponse
+  AccountDetailsResponse,
+  ChatMessage,
+  SARReportResponse,
+  HelperBotChatResponse,
+  NL2CypherResponse
 } from '../types/aml';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -65,5 +69,27 @@ export const api = {
     fetchJson(`/accounts/${encodeURIComponent(accountId)}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status })
-    })
+    }),
+
+  // AML HelperBot Endpoints
+  generateSARReport: (accountId: string): Promise<SARReportResponse> =>
+    fetchJson('/copilot/sar', {
+      method: 'POST',
+      body: JSON.stringify({ accountId })
+    }),
+
+  chatWithHelperBot: (message: string, history?: ChatMessage[], contextAccountId?: string): Promise<HelperBotChatResponse> =>
+    fetchJson('/copilot/chat', {
+      method: 'POST',
+      body: JSON.stringify({ message, history, contextAccountId })
+    }),
+
+  translateNLToCypher: (prompt: string): Promise<NL2CypherResponse> =>
+    fetchJson('/copilot/nl2cypher', {
+      method: 'POST',
+      body: JSON.stringify({ prompt })
+    }),
+
+  recalculateRiskScores: (): Promise<{ message: string; result: any }> =>
+    fetchJson('/overview/recalculate-risk', { method: 'POST' })
 };

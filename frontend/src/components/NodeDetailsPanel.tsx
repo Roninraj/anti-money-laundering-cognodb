@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ShieldAlert, GitBranch, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { X, ShieldAlert, GitBranch, AlertTriangle, CheckCircle2, Bot } from 'lucide-react';
 import type { GraphNode, AccountDetailsResponse } from '../types/aml';
 import { api } from '../services/api';
 
@@ -7,6 +7,7 @@ interface NodeDetailsPanelProps {
   node: GraphNode | null;
   onClose: () => void;
   onExpandNeighborhood: (accountId: string) => void;
+  onOpenHelperBotSAR?: (accountId: string) => void;
   onStatusChanged: () => void;
 }
 
@@ -14,6 +15,7 @@ export const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
   node,
   onClose,
   onExpandNeighborhood,
+  onOpenHelperBotSAR,
   onStatusChanged
 }) => {
   const [details, setDetails] = useState<AccountDetailsResponse | null>(null);
@@ -42,7 +44,7 @@ export const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
       onStatusChanged();
     } catch (err) {
       console.error("Failed to update status:", err);
-    } fontally: {
+    } finally {
       setUpdatingStatus(false);
     }
   };
@@ -245,6 +247,17 @@ export const NodeDetailsPanel: React.FC<NodeDetailsPanelProps> = ({
 
       {/* Action Deck Buttons */}
       <div className="pt-4 border-t border-slate-800 space-y-2">
+        {/* AML HelperBot SAR Generator Button */}
+        {node.label === 'Account' && onOpenHelperBotSAR && (
+          <button
+            onClick={() => onOpenHelperBotSAR(node.id)}
+            className="w-full flex items-center justify-center space-x-2 py-2.5 px-3 text-xs font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-xl border border-blue-400/40 shadow-lg shadow-blue-900/30 transition transform active:scale-95"
+          >
+            <Bot className="w-4 h-4" />
+            <span>✨ AML HelperBot: Generate SAR Dossier</span>
+          </button>
+        )}
+
         {node.label === 'Account' && (
           <button
             onClick={() => onExpandNeighborhood(node.id)}

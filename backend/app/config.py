@@ -16,6 +16,8 @@ class Settings(BaseModel):
     cognodb_uri: str = os.getenv("COGNODB_URI", "bolt+s://demo.databases.cognodb.cloud")
     cognodb_user: str = os.getenv("COGNODB_USER", "cognodb")
     cognodb_password: str = os.getenv("COGNODB_PASSWORD", "demo_password")
+    gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
+    openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     environment: str = os.getenv("ENVIRONMENT", "development")
     app_title: str = "AML Graph Intelligence Console API"
     app_version: str = "1.0.0"

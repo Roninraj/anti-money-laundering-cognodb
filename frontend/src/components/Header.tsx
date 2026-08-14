@@ -7,6 +7,7 @@ interface HeaderProps {
   connection: ConnectionStatus | null;
   activeQuery: QueryDetails | null;
   onOpenInspector: () => void;
+  onOpenHelperBot: () => void;
   onSelectAccount: (account: SearchAccountResult, queryDetails?: QueryDetails) => void;
   onResetGraph: () => void;
 }
@@ -15,6 +16,7 @@ export const Header: React.FC<HeaderProps> = ({
   connection,
   activeQuery,
   onOpenInspector,
+  onOpenHelperBot,
   onSelectAccount,
   onResetGraph
 }) => {
@@ -49,7 +51,7 @@ export const Header: React.FC<HeaderProps> = ({
       />
 
       {/* Right Controls & Connection Status */}
-      <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-2.5">
         {/* Connection Status Pill */}
         <div
           title={connection?.reason || connection?.uri || 'Connecting to database...'}
@@ -72,6 +74,16 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
           <span>Reset</span>
+        </button>
+
+        {/* AML HelperBot Trigger Button */}
+        <button
+          onClick={onOpenHelperBot}
+          className="flex items-center space-x-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 rounded-lg border border-blue-400/30 shadow-lg shadow-blue-900/30 transition transform active:scale-95"
+          title="Open AML HelperBot AI Assistant"
+        >
+          <span className="w-2 h-2 rounded-full bg-blue-300 animate-ping" />
+          <span>AML HelperBot</span>
         </button>
 
         {/* Cypher Console Trigger Button */}
