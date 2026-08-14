@@ -34,23 +34,23 @@ In CognoDB, **relationships are first-class entities stored as direct memory ref
 
 ```mermaid
 graph TD
-    classDef account fill:#ef4444,stroke:#991b1b,stroke-width:2px,color:#fff;
-    classDef device fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#fff;
-    classDef ip fill:#a855f7,stroke:#6b21a8,stroke-width:2px,color:#fff;
-    classDef customer fill:#10b981,stroke:#047857,stroke-width:2px,color:#fff;
+    classDef account fill:#ef4444,stroke:#991b1b,stroke-width:2px,color:#ffffff
+    classDef device fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#ffffff
+    classDef ip fill:#a855f7,stroke:#6b21a8,stroke-width:2px,color:#ffffff
+    classDef customer fill:#10b981,stroke:#047857,stroke-width:2px,color:#ffffff
 
-    Customer[Customer Entity<br/><i>id, name, taxId, country</i>] :::customer
-    AccountSrc[Account: Shell Corp Alpha<br/><i>id, accountNumber, status, riskScore, balance</i>] :::account
-    AccountTgt[Account: Offshore Trust<br/><i>id, accountNumber, status, riskScore, balance</i>] :::account
-    Device[Device Node<br/><i>id, deviceId, deviceType, os</i>] :::device
-    IP[IPAddress Node<br/><i>id, ip, country, isProxy</i>] :::ip
+    Customer["Customer Entity<br/>(id, name, taxId, country)"]:::customer
+    AccountSrc["Account: Shell Corp Alpha<br/>(id, accountNumber, status, riskScore, balance)"]:::account
+    AccountTgt["Account: Offshore Trust<br/>(id, accountNumber, status, riskScore, balance)"]:::account
+    Device["Device Node<br/>(id, deviceId, deviceType, os)"]:::device
+    IP["IPAddress Node<br/>(id, ip, country, isProxy)"]:::ip
 
-    Customer -- ":OWNS" --> AccountSrc
-    AccountSrc -- ":TRANSFERRED {amount, timestamp, isLaundering}" --> AccountTgt
-    AccountTgt -- ":TRANSFERRED {amount, timestamp, isLaundering}" --> AccountSrc
-    AccountSrc -- ":USED_DEVICE {lastUsed}" --> Device
-    AccountSrc -- ":CONNECTED_FROM {lastLogin}" --> IP
-    AccountTgt -- ":USED_DEVICE {lastUsed}" --> Device
+    Customer -->|:OWNS| AccountSrc
+    AccountSrc -->|":TRANSFERRED (amount, timestamp, isLaundering)"| AccountTgt
+    AccountTgt -->|":TRANSFERRED (amount, timestamp, isLaundering)"| AccountSrc
+    AccountSrc -->|":USED_DEVICE (lastUsed)"| Device
+    AccountSrc -->|":CONNECTED_FROM (lastLogin)"| IP
+    AccountTgt -->|":USED_DEVICE (lastUsed)"| Device
 ```
 
 ### Labeled Nodes & Properties
