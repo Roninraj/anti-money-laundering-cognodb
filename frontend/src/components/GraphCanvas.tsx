@@ -60,8 +60,14 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
 
-    const width = containerRef.current.clientWidth;
-    const height = containerRef.current.clientHeight;
+    const width = containerRef.current.clientWidth || 1100;
+    const height = containerRef.current.clientHeight || 620;
+    const dpr = window.devicePixelRatio || 1;
+
+    // Set HiDPI canvas backing store once
+    const canvas = canvasRef.current;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
 
     // Reset center transform
     transformRef.current = { x: width / 2, y: height / 2, k: 1 };
@@ -84,21 +90,18 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     let animationFrameId: number;
 
     const render = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
+      if (!canvasRef.current) return;
+      const ctx = canvasRef.current.getContext('2d');
       if (!ctx) return;
 
-      // Set HiDPI canvas backing store
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      ctx.scale(dpr, dpr);
+      const curWidth = (containerRef.current?.clientWidth || width);
+      const curHeight = (containerRef.current?.clientHeight || height);
 
-      ctx.clearRect(0, 0, width, height);
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, curWidth, curHeight);
 
       const { x: tx, y: ty, k: tk } = transformRef.current;
-      ctx.save();
       ctx.translate(tx, ty);
       ctx.scale(tk, tk);
 

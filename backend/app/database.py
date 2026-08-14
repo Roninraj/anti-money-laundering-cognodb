@@ -38,24 +38,22 @@ class DatabaseManager:
             return
 
         try:
-            # Initialize official Neo4j driver with optimal timeout and pooling limits
+            # Initialize official Neo4j driver with low-latency non-blocking connection limits
             self.driver = GraphDatabase.driver(
                 uri,
                 auth=(user, password),
                 max_connection_lifetime=300,
                 max_connection_pool_size=50,
-                connection_acquisition_timeout=5.0,
-                max_transaction_retry_time=3.0
+                connection_acquisition_timeout=3.0,
+                max_transaction_retry_time=2.0
             )
-            # Test connectivity
-            self.driver.verify_connectivity()
             self.is_connected = True
             self.connection_error = None
-            logger.info(f"Successfully connected to CognoDB Cloud at {uri}")
+            logger.info(f"CognoDB Cloud driver initialized for {uri}")
         except Exception as e:
             self.is_connected = False
             self.connection_error = str(e)
-            logger.warning(f"Could not connect to CognoDB Cloud: {e}. Falling back to In-Memory Engine.")
+            logger.warning(f"Could not initialize CognoDB driver: {e}. Running in Standby mode.")
 
     def _get_cache_key(self, query: str, parameters: Dict[str, Any]) -> str:
         param_str = json.dumps(parameters, sort_keys=True, default=str)
