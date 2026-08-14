@@ -301,15 +301,8 @@ anti-money-laundering-cognodb/
 
 ---
 
-## 9. Security & Governance Compliance
 
-* **Parameterization**: Strict use of Cypher parameters prevents second-order Cypher injections.
-* **Destructive Operation Guards**: Drop database and schema modification statements are rejected by safety middleware.
-* **Regulatory Compliance Standards**: SAR narrative templates and threat models adhere to FinCEN Guidance FIN-2019-G001, FATF Recommendation 16, and the USA PATRIOT Act (Title III).
-
----
-
-## 10. License & Attribution
+## 9. License & Attribution
 
 * **Dataset Attribution**: [SAML — Synthetic Transaction Monitoring Dataset for AML](https://www.kaggle.com/datasets/berkanoztas/synthetic-transaction-monitoring-dataset-aml) by Berkan Oztas.
 * **Database Platform**: [CognoDB](https://cognodb.com).
