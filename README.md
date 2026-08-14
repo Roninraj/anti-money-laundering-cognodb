@@ -33,17 +33,12 @@ In CognoDB, **relationships are first-class entities stored as direct memory ref
 ## 3. Graph Data Model Specification
 
 ```mermaid
-graph TD
-    classDef account fill:#ef4444,stroke:#991b1b,stroke-width:2px,color:#ffffff
-    classDef device fill:#3b82f6,stroke:#1d4ed8,stroke-width:2px,color:#ffffff
-    classDef ip fill:#a855f7,stroke:#6b21a8,stroke-width:2px,color:#ffffff
-    classDef customer fill:#10b981,stroke:#047857,stroke-width:2px,color:#ffffff
-
-    Customer["Customer Entity<br/>(id, name, taxId, country)"]:::customer
-    AccountSrc["Account: Shell Corp Alpha<br/>(id, accountNumber, status, riskScore, balance)"]:::account
-    AccountTgt["Account: Offshore Trust<br/>(id, accountNumber, status, riskScore, balance)"]:::account
-    Device["Device Node<br/>(id, deviceId, deviceType, os)"]:::device
-    IP["IPAddress Node<br/>(id, ip, country, isProxy)"]:::ip
+flowchart TD
+    Customer["Customer Entity<br/>(id, name, taxId, country)"]
+    AccountSrc["Account: Shell Corp Alpha<br/>(id, accountNumber, status, riskScore, balance)"]
+    AccountTgt["Account: Offshore Trust<br/>(id, accountNumber, status, riskScore, balance)"]
+    Device["Device Node<br/>(id, deviceId, deviceType, os)"]
+    IP["IPAddress Node<br/>(id, ip, country, isProxy)"]
 
     Customer -->|:OWNS| AccountSrc
     AccountSrc -->|":TRANSFERRED (amount, timestamp, isLaundering)"| AccountTgt
