@@ -6,20 +6,8 @@ from app.cypher_queries import CYPHER_QUERIES
 
 router = APIRouter(prefix="/api/graph", tags=["Graph Network Topology"])
 
-def _format_clean_name(raw_name: str, bank: Optional[str] = None, entity_type: Optional[str] = None) -> str:
-    if not raw_name:
-        return "Unknown Entity"
-    if not raw_name.startswith("Account ACC-"):
-        return raw_name
-    b = bank
-    if not b and "(" in raw_name and ")" in raw_name:
-        b = raw_name.split("(")[-1].replace(")", "").strip()
-    b = b or "Bank-UK"
-    t = (entity_type or "Business").capitalize()
-    return f"{b} {t}"
-
 def _extract_node(entity: Any) -> Optional[Dict[str, Any]]:
-    """Helper to safely extract Node attributes whether entity is dict, tuple, or Neo4j Node."""
+    """Helper to safely extract Node attributes directly from CognoDB."""
     if not entity:
         return None
     if isinstance(entity, dict):
@@ -27,17 +15,14 @@ def _extract_node(entity: Any) -> Optional[Dict[str, Any]]:
         node_id = props.get("id") or entity.get("id")
         if not node_id:
             return None
-        raw_name = props.get("holderName") or entity.get("holderName") or node_id
-        bank = props.get("bank")
-        acc_type = props.get("type", "UNKNOWN")
         return {
             "id": node_id,
             "label": entity.get("label", props.get("label", "Account")),
-            "holderName": _format_clean_name(raw_name, bank, acc_type),
+            "holderName": props.get("holderName") or entity.get("holderName") or node_id,
             "status": props.get("status", "NORMAL"),
             "riskScore": props.get("riskScore", 0),
             "balance": props.get("balance", 0.0),
-            "type": acc_type,
+            "type": props.get("type", "UNKNOWN"),
             "ip": props.get("ip"),
             "deviceId": props.get("deviceId"),
             "isProxy": props.get("isProxy", False)
@@ -48,17 +33,14 @@ def _extract_node(entity: Any) -> Optional[Dict[str, Any]]:
         if not node_id:
             return None
         labels = list(getattr(entity, "labels", ["Account"]))
-        raw_name = props.get("holderName", node_id)
-        bank = props.get("bank")
-        acc_type = props.get("type", "UNKNOWN")
         return {
             "id": node_id,
             "label": labels[0] if labels else "Account",
-            "holderName": _format_clean_name(raw_name, bank, acc_type),
+            "holderName": props.get("holderName", node_id),
             "status": props.get("status", "NORMAL"),
             "riskScore": props.get("riskScore", 0),
             "balance": props.get("balance", 0.0),
-            "type": acc_type,
+            "type": props.get("type", "UNKNOWN"),
             "ip": props.get("ip"),
             "deviceId": props.get("deviceId"),
             "isProxy": props.get("isProxy", False)

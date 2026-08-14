@@ -56,26 +56,12 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
     return base + bonus;
   };
 
-  // Helper: Clean and concise account name formatter (Strictly Account Names, No Raw Account Numbers)
+  // Helper: Return actual account name that matches with the account against the database
   const formatDisplayName = (node: GraphNode): string => {
-    // 1. Infrastructure Labels
-    if (node.label === 'Device') return node.deviceId ? `Device ${node.deviceId}` : 'Hardware Hub';
-    if (node.label === 'IPAddress') return node.ip ? `IP: ${node.ip}` : 'Proxy IP';
+    if (node.label === 'Device') return node.deviceId || node.id;
+    if (node.label === 'IPAddress') return node.ip || node.id;
 
-    let name = node.holderName || '';
-
-    // 2. Named Entity (e.g. Apex Global Capital, Shell Corp Alpha, Bank-UK Business)
-    if (name && !name.startsWith('Account ACC-')) {
-      return name.length > 22 ? name.substring(0, 20) + '…' : name;
-    }
-
-    // 3. Transform boilerplate "Account ACC-..." into understandable real account name
-    const bankMatch = name.match(/\((Bank-[^)]+)\)/);
-    const bank = bankMatch ? bankMatch[1] : 'Commercial';
-    const type = node.type && node.type !== 'UNKNOWN' ? node.type : (node.status === 'FLAGGED' ? 'Shell' : 'Corporate');
-    const typeLabel = type.charAt(0).toUpperCase() + type.slice(1).toLowerCase();
-
-    return `${bank} ${typeLabel}`;
+    return node.holderName || node.id;
   };
 
   // Setup D3 Force Simulation & Render Loop
