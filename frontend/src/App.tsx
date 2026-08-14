@@ -277,6 +277,16 @@ export const App: React.FC = () => {
         onClose={() => setIsInspectorOpen(false)}
       />
 
+      {/* Floating AML HelperBot Trigger FAB */}
+      <button
+        onClick={() => setIsHelperBotOpen(true)}
+        className="fixed bottom-6 right-6 z-40 flex items-center space-x-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-full shadow-2xl border border-blue-400/40 hover:scale-105 active:scale-95 transition duration-200 group"
+        title="Open AML HelperBot AI Assistant"
+      >
+        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
+        <span className="font-bold text-xs tracking-wide">AML HelperBot</span>
+      </button>
+
       {/* AML HelperBot AI Assistant Modal */}
       <AMLHelperBotModal
         isOpen={isHelperBotOpen}
