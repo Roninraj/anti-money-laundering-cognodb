@@ -1,6 +1,6 @@
 """
 Parameterized openCypher queries for Anti-Money Laundering (AML) graph detection.
-All queries strictly use $parameter substitution to prevent Cypher injection.
+All queries strictly use $parameter substitution to prevent Cypher injection and maximize execution plan caching.
 """
 
 CYPHER_QUERIES = {
@@ -22,9 +22,11 @@ CYPHER_QUERIES = {
     
     "DETECT_MONEY_LOOPS": {
         "name": "Detect Circular Money Loops (Multi-hop 2..4)",
-        "description": "Identifies circular money flows (e.g., A -> B -> C -> A) used to obscure the source of illicit funds.",
+        "description": "Identifies circular money flows (e.g., A -> B -> C -> A) anchored at high-risk accounts to prevent unbounded traversal.",
         "cypher": """
-        MATCH path = (a:Account)-[r:TRANSFERRED*2..4]->(a:Account)
+        MATCH (a:Account)
+        WHERE a.status IN ['FLAGGED', 'SUSPICIOUS', 'SUSPENDED'] OR a.riskScore >= 60
+        MATCH path = (a)-[r:TRANSFERRED*2..4]->(a)
         WHERE ALL(x IN nodes(path)[1..-1] WHERE x <> a)
         WITH path, nodes(path) AS cycleNodes, relationships(path) AS cycleRels
         RETURN [n IN cycleNodes | n.id] AS nodeIds,
@@ -41,25 +43,43 @@ CYPHER_QUERIES = {
 
     "SHARED_INFRASTRUCTURE": {
         "name": "Analyze Shared Infrastructure (Device & IP Hubs)",
-        "description": "Detects distinct bank accounts accessing the financial system via identical IP addresses or physical devices.",
+        "description": "Detects distinct bank accounts accessing the financial system via identical IP addresses or physical devices using hub-first pattern matching.",
         "cypher": """
-        MATCH (a1:Account)-[:USED_DEVICE|CONNECTED_FROM]->(infra)<-[:USED_DEVICE|CONNECTED_FROM]-(a2:Account)
+        MATCH (d:Device)<-[:USED_DEVICE]-(a1:Account)
+        MATCH (d)<-[:USED_DEVICE]-(a2:Account)
         WHERE a1.id < a2.id
         OPTIONAL MATCH (a1)-[t:TRANSFERRED]-(a2)
         RETURN a1.id AS account1Id,
                a1.holderName AS account1Holder,
                a1.status AS account1Status,
-               infra.id AS infraId,
-               labels(infra)[0] AS infraType,
-               infra.ip AS ipAddress,
-               infra.deviceId AS deviceId,
-               infra.isProxy AS isProxy,
+               d.id AS infraId,
+               'Device' AS infraType,
+               null AS ipAddress,
+               d.deviceId AS deviceId,
+               false AS isProxy,
                a2.id AS account2Id,
                a2.holderName AS account2Holder,
                a2.status AS account2Status,
                coalesce(t.amount, 0.0) AS directTransferAmount
-        ORDER BY infra.isProxy DESC
-        LIMIT 100
+        LIMIT 50
+        UNION ALL
+        MATCH (ip:IPAddress)<-[:CONNECTED_FROM]-(a1:Account)
+        MATCH (ip)<-[:CONNECTED_FROM]-(a2:Account)
+        WHERE a1.id < a2.id
+        OPTIONAL MATCH (a1)-[t:TRANSFERRED]-(a2)
+        RETURN a1.id AS account1Id,
+               a1.holderName AS account1Holder,
+               a1.status AS account1Status,
+               ip.id AS infraId,
+               'IPAddress' AS infraType,
+               ip.ip AS ipAddress,
+               null AS deviceId,
+               ip.isProxy AS isProxy,
+               a2.id AS account2Id,
+               a2.holderName AS account2Holder,
+               a2.status AS account2Status,
+               coalesce(t.amount, 0.0) AS directTransferAmount
+        LIMIT 50
         """,
         "relational_comparison": "In relational schemas, discovering entity networks connected through shared secondary attributes requires joining multiple 3-way bridge tables."
     },
@@ -86,7 +106,7 @@ CYPHER_QUERIES = {
 
     "GET_NEIGHBORHOOD": {
         "name": "1-2 Hop Entity Neighborhood",
-        "description": "Retrieves immediate and secondary connections for a targeted account ID.",
+        "description": "Retrieves immediate and secondary connections for a targeted account ID using indexed direct pointer traversal.",
         "cypher": """
         MATCH (a:Account {id: $accountId})
         OPTIONAL MATCH path = (a)-[r*1..2]-(neighbor)
@@ -110,12 +130,14 @@ CYPHER_QUERIES = {
 
     "SEARCH_ACCOUNTS": {
         "name": "Search Accounts by ID or Holder Name",
-        "description": "Queries accounts using parameterized regex or exact match.",
+        "description": "Queries accounts using prefix index matches and substring fallback, ordered by risk score.",
         "cypher": """
         MATCH (a:Account)
-        WHERE toLower(a.holderName) CONTAINS toLower($searchTerm)
+        WHERE $searchTerm = ""
+           OR a.id STARTS WITH $searchTerm
+           OR a.accountNumber STARTS WITH $searchTerm
+           OR toLower(a.holderName) CONTAINS toLower($searchTerm)
            OR toLower(a.id) CONTAINS toLower($searchTerm)
-           OR toLower(a.accountNumber) CONTAINS toLower($searchTerm)
         RETURN a.id AS id,
                a.accountNumber AS accountNumber,
                a.holderName AS holderName,
@@ -123,6 +145,7 @@ CYPHER_QUERIES = {
                a.status AS status,
                a.balance AS balance,
                a.type AS type
+        ORDER BY a.riskScore DESC
         LIMIT 20
         """,
         "relational_comparison": "Standard indexed search across Account attributes."

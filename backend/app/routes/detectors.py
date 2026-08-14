@@ -19,7 +19,7 @@ def detect_money_loops():
     """
     start_time = time.time()
     query_info = CYPHER_QUERIES["DETECT_MONEY_LOOPS"]
-    results = db_manager.execute_cypher(query_info["cypher"])
+    results = db_manager.execute_cypher(query_info["cypher"], use_cache=True, ttl_seconds=15)
     execution_time_ms = round((time.time() - start_time) * 1000, 2)
 
     return {
@@ -43,7 +43,7 @@ def analyze_shared_infrastructure():
     """
     start_time = time.time()
     query_info = CYPHER_QUERIES["SHARED_INFRASTRUCTURE"]
-    results = db_manager.execute_cypher(query_info["cypher"])
+    results = db_manager.execute_cypher(query_info["cypher"], use_cache=True, ttl_seconds=15)
     execution_time_ms = round((time.time() - start_time) * 1000, 2)
 
     return {
@@ -75,7 +75,7 @@ def detect_smurfing(params: Optional[SmurfingParams] = None):
         "minThreshold": params.minThreshold,
         "minTransactions": params.minTransactions
     }
-    results = db_manager.execute_cypher(query_info["cypher"], cypher_params)
+    results = db_manager.execute_cypher(query_info["cypher"], cypher_params, use_cache=True, ttl_seconds=15)
     execution_time_ms = round((time.time() - start_time) * 1000, 2)
 
     return {

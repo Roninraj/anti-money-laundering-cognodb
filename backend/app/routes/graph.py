@@ -103,7 +103,7 @@ def get_full_graph():
     """Fetches full AML network topology."""
     start_time = time.time()
     query_info = CYPHER_QUERIES["FULL_GRAPH"]
-    results = db_manager.execute_cypher(query_info["cypher"])
+    results = db_manager.execute_cypher(query_info["cypher"], use_cache=True, ttl_seconds=15)
     execution_time_ms = round((time.time() - start_time) * 1000, 2)
 
     graph_data = _format_graph_response(results)
@@ -125,7 +125,7 @@ def get_neighborhood(account_id: str):
     start_time = time.time()
     query_info = CYPHER_QUERIES["GET_NEIGHBORHOOD"]
     params = {"accountId": account_id}
-    results = db_manager.execute_cypher(query_info["cypher"], params)
+    results = db_manager.execute_cypher(query_info["cypher"], params, use_cache=True, ttl_seconds=10)
     execution_time_ms = round((time.time() - start_time) * 1000, 2)
 
     graph_data = _format_graph_response(results)

@@ -17,7 +17,7 @@ def get_dashboard_stats():
     """Retrieves high-level AML dashboard metrics."""
     start_time = time.time()
     query_info = CYPHER_QUERIES["OVERVIEW_STATS"]
-    results = db_manager.execute_cypher(query_info["cypher"])
+    results = db_manager.execute_cypher(query_info["cypher"], use_cache=True, ttl_seconds=10)
     execution_time_ms = round((time.time() - start_time) * 1000, 2)
 
     stats = results[0] if results else {
@@ -44,7 +44,7 @@ def search_accounts(q: str = Query("", description="Account ID, holder name or a
     start_time = time.time()
     query_info = CYPHER_QUERIES["SEARCH_ACCOUNTS"]
     params = {"searchTerm": q}
-    results = db_manager.execute_cypher(query_info["cypher"], params)
+    results = db_manager.execute_cypher(query_info["cypher"], params, use_cache=True, ttl_seconds=5)
     execution_time_ms = round((time.time() - start_time) * 1000, 2)
 
     return {

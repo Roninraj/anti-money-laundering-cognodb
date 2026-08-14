@@ -22,12 +22,12 @@ def get_account_details(account_id: str):
         counterparty: other.holderName
     }) AS transactions
     """
-    results = db_manager.execute_cypher(cypher, {"accountId": account_id})
+    results = db_manager.execute_cypher(cypher, {"accountId": account_id}, use_cache=True, ttl_seconds=10)
     if not results:
         # Fallback to search if match not directly returned
         search_res = db_manager.execute_cypher("""
         MATCH (a:Account {id: $accountId}) RETURN a
-        """, {"accountId": account_id})
+        """, {"accountId": account_id}, use_cache=True, ttl_seconds=10)
         if not search_res:
             raise HTTPException(status_code=404, detail=f"Account {account_id} not found.")
         return {"account": search_res[0].get("a"), "customer": None, "transactions": []}
@@ -54,7 +54,7 @@ def update_account_status(account_id: str, payload: StatusUpdate):
     RETURN a.id AS id, a.status AS status, a.riskScore AS riskScore
     """
     params = {"accountId": account_id, "newStatus": payload.status}
-    results = db_manager.execute_cypher(cypher, params)
+    results = db_manager.execute_write_cypher(cypher, params)
     return {
         "message": f"Updated account {account_id} status to {payload.status}",
         "result": results[0] if results else {"id": account_id, "status": payload.status}
